@@ -5,6 +5,20 @@
 #include <sstream>
 #include <iomanip>
 
+void UE::SetAuthenticationParameters(const std::string& supi, const std::string& key, const std::vector<uint8_t>& amf, const std::vector<uint8_t>& rho, const Kyber::Polynomial& pk)
+{
+    m_SUPI = supi;
+    m_LongTermKey = key;
+    m_AMF = amf;
+    m_Rho = rho;
+    m_NetworkPK = pk;
+
+    // Assuming Kyber::Matrix A is generated from rho  
+    m_A = Kyber::GenerateA(rho);
+
+    std::cout << "Authentication parameters set for UE " << m_Id << std::endl;
+}
+
 void UE::InitiateConnection(UAV& targetUAV)
 {
     std::cout << "UE " << m_Id << ": Initiating connection via UAV " << targetUAV.GetID() << std::endl;
