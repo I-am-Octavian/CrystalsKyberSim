@@ -11,17 +11,17 @@ public:
     std::vector<std::shared_ptr<UAV>> uavs;
     std::vector<std::shared_ptr<gNB>> gnbs;
 
-    void addUE(uint32_t id, float x, float y, const std::string& longTermKey = "DEFAULT_KEY") {
+    void addUE(uint32_t id, uint32_t x, uint32_t y, const std::string& longTermKey = "DEFAULT_KEY") {
         ues.push_back(std::make_shared<UE>(x, y, 0, 0, id, longTermKey));
         std::cout << "World: Added UE " << id << " at (" << x << ", " << y << ")" << std::endl;
     }
 
-    void addUAV(uint32_t id, float x, float y) {
+    void addUAV(uint32_t id, uint32_t x, uint32_t y) {
         uavs.push_back(std::make_shared<UAV>(x, y, 0, 0, id));
         std::cout << "World: Added UAV " << id << " at (" << x << ", " << y << ")" << std::endl;
     }
 
-    void addGNB(uint32_t id, float x, float y) {
+    void addGNB(uint32_t id, uint32_t x, uint32_t y) {
         gnbs.push_back(std::make_shared<gNB>(x, y, 0, 0, id));
         std::cout << "World: Added gNB " << id << " at (" << x << ", " << y << ")" << std::endl;
     }
