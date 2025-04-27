@@ -1,9 +1,11 @@
 ﻿#include "UE.h"
+#include "KyberUtils.h"
 #include <random>
 #include <vector>
 #include <array>
 #include <sstream>
 #include <iomanip>
+#include <stdexcept>
 
 void UE::SetAuthenticationParameters(const std::string& supi, const std::string& key, const std::vector<uint8_t>& amf, const std::vector<uint8_t>& rho, const Kyber::Polynomial& pk)
 {
@@ -19,28 +21,242 @@ void UE::SetAuthenticationParameters(const std::string& supi, const std::string&
     std::cout << "Authentication parameters set for UE " << m_Id << std::endl;
 }
 
-void UE::InitiateConnection(UAV& targetUAV)
-{
+// Helper to get connected UAV shared_ptr
+std::shared_ptr<UAV> UE::GetConnectedUAVShared() const {
+    if (auto uav_sp = m_ConnectedUAV.lock()) {
+        return uav_sp;
+    }
+    return nullptr;
+}
+
+void UE::InitiateConnection(UAV& targetUAV) {
     std::cout << "UE " << m_Id << ": Initiating connection via UAV " << targetUAV.GetID() << std::endl;
     m_UEState = "Connecting";
 
-    // Generate authentication parameters using Kyber algorithm
-    auto [suci, other] = GenerateAuthParams();
+    // Step 1 & 2: Generate SUCI = C1 || C2 || MAC
+    // GenerateAuthParams calculates these based on Kyber PKE (placeholders)
+    // and standard AKA f1K (placeholder).
+    // It stores RAND and increments SQN internally.
+    auto [suci_bytes, suci_string_for_display] = GenerateAuthParams(); // Assuming this returns the byte vector now
 
-    std::cout << "UE " << m_Id << ": Generated authentication parameters for connection." << std::endl;
+    std::cout << "UE " << m_Id << ": Generated SUCI: " << suci_string_for_display << std::endl;
 
-    // Placeholder: Send initial access request to UAV
-    // targetUAV.receiveConnectionRequest(*this);
+    // Send SUCI to UAV
+    std::cout << "UE " << m_Id << " -> UAV " << targetUAV.GetID() << ": Sending SUCI" << std::endl;
+    targetUAV.ReceiveConnectionRequest(m_Id, suci_bytes);
 }
 
-void UE::InitiateHandover(UAV& currentUAV, UAV& targetUAV)
-{
-    std::cout << "UE " << m_Id << ": Initiating handover from UAV " << currentUAV.GetID() << " to UAV " << targetUAV.GetID() << std::endl;
+void UE::HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
+                                       const std::vector<uint8_t>& ci,
+                                       const std::string& tid_j) { // UAV's TID needed
+    std::cout << "UE " << m_Id << ": Received UAV-Assisted Auth Response (HRES*i, Ci) via UAV (TIDj=" << tid_j << ")" << std::endl;
+
+    // Step 6: Calculate HXRES*i and KRANi
+    // Need RAND from the initial GenerateAuthParams call.
+    // Need K (long term key).
+    // Placeholder: Derive KRANi (should use CK/IK derived from K and RAND)
+    m_KRANi = Kyber::KDF(Kyber::StringToBytes(m_LongTermKey + "_KRANi"), m_RAND); // Placeholder KRANi
+    std::cout << "UE " << m_Id << ": Derived KRANi (size=" << m_KRANi.size() << ")" << std::endl;
+
+
+    // Placeholder: Calculate RES*i (requires K, RAND, CK, IK)
+    std::vector<uint8_t> res_i = Kyber::f2K(m_LongTermKey, m_RAND);
+    std::vector<uint8_t> ck = Kyber::f3K(m_LongTermKey, m_RAND);
+    std::vector<uint8_t> ik = Kyber::f4K(m_LongTermKey, m_RAND);
+    std::vector<uint8_t> ck_ik = Kyber::ConcatBytes({ck, ik});
+    std::vector<uint8_t> net_name_bytes = Kyber::StringToBytes("TestNet"); // Assume known or configured
+    std::vector<uint8_t> res_star_input = Kyber::ConcatBytes({net_name_bytes, m_RAND, res_i});
+    for(size_t i=0; i<res_star_input.size() && i<ck_ik.size(); ++i) res_star_input[i] ^= ck_ik[i];
+    std::vector<uint8_t> res_star_i = Kyber::KDF(res_star_input); // This is RES*i
+    std::cout << "UE " << m_Id << ": Calculated RES*i." << std::endl;
+
+
+    // Calculate HXRES*i = KDF(KRANi, Ci || RES*i)
+    std::vector<uint8_t> hxres_input = ci;
+    hxres_input.insert(hxres_input.end(), res_star_i.begin(), res_star_i.end());
+    std::vector<uint8_t> hxres_star_i = Kyber::KDF(m_KRANi, hxres_input);
+    std::cout << "UE " << m_Id << ": Calculated HXRES*i." << std::endl;
+
+
+    // Authenticate network: Check HXRES*i == HRES*i
+    if (hxres_star_i != hres_star_i) {
+        std::cerr << "UE " << m_Id << ": Network authentication failed! HRES*i mismatch." << std::endl;
+        m_UEState = "Failed";
+        Disconnect(); // Or specific failure state
+        return;
+    }
+    std::cout << "UE " << m_Id << ": Network authentication successful (HRES*i matches)." << std::endl;
+
+    // Compute TID'i || Token'i = DKRANi(Ci)
+    std::vector<uint8_t> decrypted_ci = Kyber::DecryptSymmetric(m_KRANi, ci);
+    std::cout << "UE " << m_Id << ": Decrypted Ci (size=" << decrypted_ci.size() << ")" << std::endl;
+
+
+    // Parse TID'i and Token'i
+    // Assuming format: [TIDi_bytes][Tokeni_bytes = TGKi || TST]
+    size_t tid_len = 10; // Example fixed length, must match gNB's generation
+    size_t tst_len = sizeof(long long); // Timestamp bytes length
+    if (decrypted_ci.size() <= tid_len) {
+         std::cerr << "UE " << m_Id << ": Error - Decrypted Ci too short to contain TIDi." << std::endl;
+         m_UEState = "Failed";
+         return;
+    }
+    m_TIDi = Kyber::BytesToString(std::vector<uint8_t>(decrypted_ci.begin(), decrypted_ci.begin() + tid_len));
+    m_Tokeni = std::vector<uint8_t>(decrypted_ci.begin() + tid_len, decrypted_ci.end());
+    std::cout << "UE " << m_Id << ": Parsed TID'i=" << m_TIDi << ", Token'i size=" << m_Tokeni.size() << std::endl;
+
+
+    // Parse TGKi and TST from Token'i
+    if (m_Tokeni.size() <= tst_len) {
+         std::cerr << "UE " << m_Id << ": Error - Token'i too short to contain TST." << std::endl;
+         m_UEState = "Failed";
+         return;
+    }
+    m_TGKi = std::vector<uint8_t>(m_Tokeni.begin(), m_Tokeni.end() - tst_len);
+    std::vector<uint8_t> tst_bytes(m_Tokeni.end() - tst_len, m_Tokeni.end());
+    m_TST = Kyber::BytesToTimestamp(tst_bytes);
+    std::cout << "UE " << m_Id << ": Parsed TGKi (size=" << m_TGKi.size() << ") and TST." << std::endl;
+
+    // Validate TST
+    if (!Kyber::ValidateTST(m_TST)) {
+         std::cerr << "UE " << m_Id << ": Error - Received TST is invalid/expired." << std::endl;
+         m_UEState = "Failed";
+         return;
+    }
+     std::cout << "UE " << m_Id << ": TST is valid." << std::endl;
+
+
+    // Update SQNi = SQNi + 1 (already done in GenerateAuthParams)
+
+    // Compute KUAVi = KDF(KRANi, TID'i || TIDj)
+    std::vector<uint8_t> tidi_bytes = Kyber::StringToBytes(m_TIDi);
+    std::vector<uint8_t> tidj_bytes = Kyber::StringToBytes(tid_j);
+    std::vector<uint8_t> kuavi_input = tidi_bytes;
+    kuavi_input.insert(kuavi_input.end(), tidj_bytes.begin(), tidj_bytes.end());
+    m_KUAVi = Kyber::KDF(m_KRANi, kuavi_input);
+    std::cout << "UE " << m_Id << ": Computed KUAVi (size=" << m_KUAVi.size() << ")" << std::endl;
+
+
+    // Store (TID'i, KUAVi, Token'i)
+    std::cout << "UE " << m_Id << ": Storing TIDi, KUAVi, Tokeni." << std::endl;
+
+    // Transmit access confirmation message to gNB (via UAV)
+    std::cout << "UE " << m_Id << ": (Placeholder) Sending Access Confirmation message." << std::endl;
+    // This step isn't fully detailed, might involve sending TIDi or similar back.
+
+    // Update state to Connected
+    // Need to get shared_ptr to the UAV somehow (passed in or looked up)
+    // ConfirmConnection(find_uav_somehow(tid_j), find_gnb_somehow()); // Update connection state
+     m_UEState = "Connected"; // Simplified state update
+     std::cout << "UE " << m_Id << ": Authentication successful. State set to Connected." << std::endl;
+
+
+}
+
+void UE::InitiateHandoverAuthentication(UAV& targetUAV) {
+    std::cout << "UE " << m_Id << ": Initiating Handover Authentication with Target UAV " << targetUAV.GetID() << " (TID*j=" << targetUAV.GetTID() << ")" << std::endl;
+
+    if (m_UEState != "Connected" || m_TIDi.empty() || m_TGKi.empty() || !Kyber::ValidateTST(m_TST)) {
+        std::cerr << "UE " << m_Id << ": Cannot initiate handover. Not connected or missing required state (TIDi, TGKi, valid TST)." << std::endl;
+        return;
+    }
+
     m_UEState = "Handover";
-    // Placeholder: Send handover request to the *target* UAV
-    // targetUAV.receiveHandoverRequest(*this, currentUAV);
-    // Placeholder: Inform current UAV about handover
-    // currentUAV.notifyHandoverInitiated(*this, targetUAV);
+    m_Handover_TargetTIDj = targetUAV.GetTID();
+    m_Handover_TargetUAV = targetUAV.GetSelfPtr(); // Need a way for UAV to provide its shared_ptr
+
+    // Step 1: Generate R1, compute MACi
+    m_Handover_R1 = GenerateRandomBytes(16); // Example size for R1
+    std::cout << "UE " << m_Id << ": Generated R1 for handover." << std::endl;
+
+
+    // MACi = KDF(TGKi, TID*j || TIDi || R1)
+    std::vector<uint8_t> tid_star_j_bytes = Kyber::StringToBytes(m_Handover_TargetTIDj);
+    std::vector<uint8_t> tidi_bytes = Kyber::StringToBytes(m_TIDi);
+    std::vector<uint8_t> mac_input = tid_star_j_bytes;
+    mac_input.insert(mac_input.end(), tidi_bytes.begin(), tidi_bytes.end());
+    mac_input.insert(mac_input.end(), m_Handover_R1.begin(), m_Handover_R1.end());
+    std::vector<uint8_t> mac_i = Kyber::KDF(m_TGKi, mac_input);
+    std::cout << "UE " << m_Id << ": Computed MACi for handover." << std::endl;
+
+
+    // Transmit (TIDi, MACi, R1, TST) to target UAV
+    std::cout << "UE " << m_Id << " -> Target UAV " << targetUAV.GetID() << ": Sending Handover Auth Request (TIDi, MACi, R1, TST)" << std::endl;
+    targetUAV.ReceiveHandoverAuthRequest(m_Id, m_TIDi, mac_i, m_Handover_R1, m_TST);
+}
+
+void UE::HandleHandoverAuthChallenge(const std::vector<uint8_t>& hres_i,
+                                     const std::vector<uint8_t>& r2) {
+    std::cout << "UE " << m_Id << ": Received Handover Auth Challenge (HRESi, R2) from Target UAV " << m_Handover_TargetTIDj << std::endl;
+
+    if (m_UEState != "Handover" || m_Handover_R1.empty() || m_Handover_TargetTIDj.empty()) {
+         std::cerr << "UE " << m_Id << ": Received unexpected Handover Challenge or missing state." << std::endl;
+         return;
+    }
+
+    // Step 3: Compute XRESi, HXRESi
+    // XRESi = KDF(TGKi, TID*j || TIDi || R1 || R2)
+    std::vector<uint8_t> tid_star_j_bytes = Kyber::StringToBytes(m_Handover_TargetTIDj);
+    std::vector<uint8_t> tidi_bytes = Kyber::StringToBytes(m_TIDi);
+    std::vector<uint8_t> xres_input = tid_star_j_bytes;
+    xres_input.insert(xres_input.end(), tidi_bytes.begin(), tidi_bytes.end());
+    xres_input.insert(xres_input.end(), m_Handover_R1.begin(), m_Handover_R1.end());
+    xres_input.insert(xres_input.end(), r2.begin(), r2.end());
+    std::vector<uint8_t> xres_i = Kyber::KDF(m_TGKi, xres_input);
+    std::cout << "UE " << m_Id << ": Computed XRESi." << std::endl;
+
+
+    // HXRESi = KDF(XRESi || R2)
+    std::vector<uint8_t> hxres_input = xres_i;
+    hxres_input.insert(hxres_input.end(), r2.begin(), r2.end());
+    std::vector<uint8_t> hxres_i = Kyber::KDF(hxres_input); // Using KDF as hash
+    std::cout << "UE " << m_Id << ": Computed HXRESi." << std::endl;
+
+
+    // Check HXRESi == HRESi
+    if (hxres_i != hres_i) {
+        std::cerr << "UE " << m_Id << ": Handover authentication failed! HRESi mismatch." << std::endl;
+        m_UEState = "Connected"; // Revert state? Or FailedHandover?
+        m_Handover_R1.clear();
+        m_Handover_TargetTIDj = "";
+        m_Handover_TargetUAV.reset();
+        return;
+    }
+    std::cout << "UE " << m_Id << ": Handover authentication successful (HRESi matches)." << std::endl;
+
+    // Compute K*UAVi = KDF(TGKi, TID*j || TIDi)
+    std::vector<uint8_t> k_star_input = tid_star_j_bytes;
+    k_star_input.insert(k_star_input.end(), tidi_bytes.begin(), tidi_bytes.end());
+    std::vector<uint8_t> k_star_uav_i = Kyber::KDF(m_TGKi, k_star_input);
+    std::cout << "UE " << m_Id << ": Computed K*UAVi (new KUAVi)." << std::endl;
+
+
+    // Store K*UAVi (replace old KUAVi)
+    m_KUAVi = k_star_uav_i;
+    std::cout << "UE " << m_Id << ": Stored new KUAVi." << std::endl;
+
+
+    // Transmit XRESi to target UAV
+    if (auto targetUAV = m_Handover_TargetUAV.lock()) {
+        std::cout << "UE " << m_Id << " -> Target UAV " << targetUAV->GetID() << ": Sending Handover Auth Confirmation (XRESi)" << std::endl;
+        targetUAV->ReceiveHandoverAuthConfirmation(m_Id, xres_i);
+
+        // Update connection state
+        m_ConnectedUAV = targetUAV; // Point to new UAV
+        m_ServingUAVId = targetUAV->GetID();
+        // gNB connection likely remains the same
+        m_UEState = "Connected";
+        std::cout << "UE " << m_Id << ": Handover to UAV " << m_ServingUAVId << " completed." << std::endl;
+
+    } else {
+         std::cerr << "UE " << m_Id << ": Target UAV pointer invalid. Cannot complete handover." << std::endl;
+         m_UEState = "Connected"; // Revert state?
+    }
+
+    // Clear handover state
+    m_Handover_R1.clear();
+    m_Handover_TargetTIDj = "";
+    m_Handover_TargetUAV.reset();
 }
 
 void UE::ConfirmConnection(std::shared_ptr<UAV> uav, std::shared_ptr<gNB> gnb)
@@ -62,13 +278,6 @@ void UE::ConfirmHandover(std::shared_ptr<UAV> newUAV)
     std::cout << "UE " << m_Id << ": Handover to UAV " << m_ServingUAVId << " completed." << std::endl;
 }
 
-void UE::ReceiveHandoverCommand(UAV& targetUAV)
-{
-    std::cout << "UE " << m_Id << ": Received handover command to UAV " << targetUAV.GetID() << std::endl;
-    m_UEState = "Handover";
-    // Placeholder: Acknowledge command and initiate connection with target UAV
-    // targetUAV.receiveHandoverConnection(*this);
-}
 
 void UE::Disconnect()
 {
@@ -78,6 +287,14 @@ void UE::Disconnect()
     m_ServingGNBId = -1;
     m_UEState = "Idle";
     std::cout << "UE " << m_Id << ": Disconnected." << std::endl;
+}
+
+void UE::HandleSyncFailure(const std::vector<uint8_t>& auts)
+{
+}
+
+void UE::HandleMacFailure()
+{
 }
 
 // Generate random bytes for RAND value
@@ -233,46 +450,19 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
         std::cout << "Warning: Using placeholder implementation for f1K" << std::endl;
     }
 
-    // Step 13: Form SUCI = C1 || C2 || MAC || Other
-    std::vector<uint8_t> SUCI;
-    SUCI.insert(SUCI.end(), C1.begin(), C1.end());
-    SUCI.insert(SUCI.end(), C2.begin(), C2.end());
-    SUCI.insert(SUCI.end(), MAC.begin(), MAC.end());
-
-    // Other parameters (simplified for this implementation)
-    std::vector<uint8_t> other = { 0x01, 0x02, 0x03, 0x04 };
-    SUCI.insert(SUCI.end(), other.begin(), other.end());
+    // Step 13: Form SUCI = C1 || C2 || MAC
+    std::vector<uint8_t> SUCI_bytes;
+    SUCI_bytes.insert(SUCI_bytes.end(), C1.begin(), C1.end());
+    SUCI_bytes.insert(SUCI_bytes.end(), C2.begin(), C2.end());
+    SUCI_bytes.insert(SUCI_bytes.end(), MAC.begin(), MAC.end());
 
     // Convert SUCI bytes to a formatted string for display/output
     std::stringstream ss;
-    ss << "SUCI:";
-    for (const auto& byte : SUCI) {
+    ss << "SUCI(Hex):";
+    for (const auto& byte : SUCI_bytes) {
         ss << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
     }
 
-    // Return the SUCI and Other parameters
-    return { SUCI, ss.str() };
+    // Return the SUCI bytes and the display string
+    return { SUCI_bytes, ss.str() };
 }
-
-// Define stub implementations of Kyber namespace functions to allow compilation
-//namespace Kyber {
-//    std::vector<uint8_t> Decompressq(const std::vector<uint8_t>& input, int parameter) {
-//        // This is a stub implementation - the real one would be implemented elsewhere
-//        return input;
-//    }
-//
-//    std::vector<uint8_t> KDF(const std::vector<uint8_t>& input) {
-//        // This is a stub implementation - the real one would be implemented elsewhere
-//        return input;
-//    }
-//
-//    std::vector<uint8_t> EMSK(const std::vector<uint8_t>& input) {
-//        // This is a stub implementation - the real one would be implemented elsewhere
-//        return input;
-//    }
-//
-//    std::vector<uint8_t> f1K(const std::vector<uint8_t>& input) {
-//        // This is a stub implementation - the real one would be implemented elsewhere
-//        return input;
-//    }
-//}

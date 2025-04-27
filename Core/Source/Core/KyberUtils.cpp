@@ -1,9 +1,11 @@
-\
 #include "KyberUtils.h"
 #include <stdexcept>
 #include <iostream>
 #include <random>
 #include <algorithm> // for std::copy
+#include <chrono>
+#include <sstream> // for TID generation
+#include <iomanip> // for TID generation
 
 // Basic placeholder implementations - Replace with actual crypto!
 
@@ -140,6 +142,20 @@ namespace Kyber {
         return output;
     }
 
+    std::vector<uint8_t> KDF(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data)
+    {
+        std::cout << "Warning: Using placeholder implementation for KDF" << std::endl;
+        // Return input slightly modified as placeholder
+        std::vector<uint8_t> output = data;
+        uint8_t val;
+        if (!key.empty()) val = key[0];
+        else val = 0xAA;
+
+        if (!output.empty()) output[0] ^= val;
+        else output.push_back(val);
+        return output;
+    }
+
     std::vector<uint8_t> EMSK(const std::vector<uint8_t>& input) {
         std::cout << "Warning: Using placeholder implementation for EMSK" << std::endl;
         // Return input slightly modified as placeholder "encryption"
@@ -249,6 +265,68 @@ namespace Kyber {
          return p;
     }
 
+    // --- New Placeholder Implementations for UAV Protocol ---
+
+    std::vector<uint8_t> EncryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
+        std::cout << "Warning: Using placeholder implementation for EncryptSymmetric (XOR)" << std::endl;
+        if (key.empty()) return data; // Cannot encrypt without key
+        std::vector<uint8_t> ciphertext = data;
+        for (size_t i = 0; i < ciphertext.size(); ++i) {
+            ciphertext[i] ^= key[i % key.size()];
+        }
+        return ciphertext;
+    }
+
+    std::vector<uint8_t> DecryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& ciphertext) {
+        std::cout << "Warning: Using placeholder implementation for DecryptSymmetric (XOR)" << std::endl;
+        // XOR decryption is the same as encryption
+        return EncryptSymmetric(key, ciphertext);
+    }
+
+    std::string GenerateTID(const std::string& prefix) {
+        static uint64_t counter = 0;
+        std::stringstream ss;
+        ss << prefix << "_" << std::hex << std::setw(8) << std::setfill('0') << counter++;
+        return ss.str();
+    }
+
+    Timestamp GenerateTST(int validity_seconds) {
+        return std::chrono::system_clock::now() + std::chrono::seconds(validity_seconds);
+    }
+
+    bool ValidateTST(const Timestamp& tst) {
+        return tst > std::chrono::system_clock::now();
+    }
+
+    // --- Helper Function Implementations ---
+
+    std::vector<uint8_t> StringToBytes(const std::string& str) {
+        return std::vector<uint8_t>(str.begin(), str.end());
+    }
+
+    std::string BytesToString(const std::vector<uint8_t>& bytes) {
+        return std::string(bytes.begin(), bytes.end());
+    }
+
+    std::vector<uint8_t> TimestampToBytes(const Timestamp& t) {
+        auto epoch_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t.time_since_epoch()).count();
+        std::vector<uint8_t> bytes(sizeof(epoch_ms));
+        // Simple Big-Endian conversion
+        for (size_t i = 0; i < sizeof(epoch_ms); ++i) {
+            bytes[sizeof(epoch_ms) - 1 - i] = static_cast<uint8_t>((epoch_ms >> (i * 8)) & 0xFF);
+        }
+        return bytes;
+    }
+
+    Timestamp BytesToTimestamp(const std::vector<uint8_t>& bytes) {
+        if (bytes.size() < sizeof(long long)) return Timestamp::min(); // Or throw
+        long long epoch_ms = 0;
+        // Simple Big-Endian conversion
+        for (size_t i = 0; i < sizeof(long long); ++i) {
+            epoch_ms |= static_cast<long long>(bytes[i]) << ((sizeof(long long) - 1 - i) * 8);
+        }
+        return Timestamp(std::chrono::milliseconds(epoch_ms));
+    }
 
 } // namespace Kyber
 

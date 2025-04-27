@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdint>
 #include <utility> // for std::pair
+#include <chrono> // For timestamps
 
 namespace Kyber {
 
@@ -14,6 +15,7 @@ namespace Kyber {
                                             // Or: using Matrix = std::vector<std::vector<Polynomial>> for A?
                                             // Let's assume A is std::vector<std::vector<int>> for simplicity in stubs.
     using Matrix2x2 = std::vector<std::vector<int>>; // Specific 2x2 matrix
+    using Timestamp = std::chrono::time_point<std::chrono::system_clock>;
 
     // Constants (Placeholder)
     const size_t POLYNOMIAL_SIZE = 256; // Example size n
@@ -56,7 +58,7 @@ namespace Kyber {
     // Key Derivation Function
     std::vector<uint8_t> KDF(const std::vector<uint8_t>& input);
     // Overload for KDF with key (needed for RES*, K_RAN)
-    // std::vector<uint8_t> KDF(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
+    std::vector<uint8_t> KDF(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
 
     // SUCI Encryption/Decryption
     std::vector<uint8_t> EMSK(const std::vector<uint8_t>& input); // Encrypt SUPI||SQN
@@ -71,12 +73,29 @@ namespace Kyber {
     std::vector<uint8_t> f3K(const std::string& key, const std::vector<uint8_t>& input); // CK generation
     std::vector<uint8_t> f4K(const std::string& key, const std::vector<uint8_t>& input); // IK generation
 
+    // --- New Functions for UAV Protocol ---
+
+    // Symmetric Encryption/Decryption (Placeholder using simple XOR)
+    std::vector<uint8_t> EncryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
+    std::vector<uint8_t> DecryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& ciphertext);
+
+    // Temporary Identity Generation (Placeholder)
+    std::string GenerateTID(const std::string& prefix);
+
+    // Timestamp Generation and Validation (Placeholder)
+    Timestamp GenerateTST(int validity_seconds);
+    bool ValidateTST(const Timestamp& tst);
+
     // --- Helper Functions ---
     std::vector<uint8_t> U64ToBytes(uint64_t val);
     uint64_t BytesToU64(const std::vector<uint8_t>& bytes);
     std::vector<uint8_t> ConcatBytes(const std::vector<std::vector<uint8_t>>& vecs);
     std::vector<uint8_t> PolyToBytes(const Polynomial& p);
     Polynomial BytesToPoly(const std::vector<uint8_t>& bytes, size_t expected_size);
+    std::vector<uint8_t> StringToBytes(const std::string& str);
+    std::string BytesToString(const std::vector<uint8_t>& bytes);
+    std::vector<uint8_t> TimestampToBytes(const Timestamp& t);
+    Timestamp BytesToTimestamp(const std::vector<uint8_t>& bytes);
 
 } // namespace Kyber
 

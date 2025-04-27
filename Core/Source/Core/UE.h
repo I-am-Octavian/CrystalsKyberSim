@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.h"
+#include "KyberUtils.h" // Include Kyber utilities
 
 class gNB;
 class UAV;
@@ -8,24 +9,13 @@ class UE;
 
 #include "UAV.h"
 #include "gNB.h"
-#include "KyberUtils.h"
 
 #include <memory>
 #include <iostream>
 #include <vector>
 #include <string>
 #include <random>
-
-//// Forward declarations for Kyber-related types, assuming they are implemented elsewhere
-//namespace Kyber {
-//    using Polynomial = std::vector<int>;
-//
-//    // Forward declarations of assumed Kyber functions
-//    std::vector<uint8_t> Decompressq(const std::vector<uint8_t>& input, int parameter);
-//    std::vector<uint8_t> KDF(const std::vector<uint8_t>& input);
-//    std::vector<uint8_t> EMSK(const std::vector<uint8_t>& input);
-//    std::vector<uint8_t> f1K(const std::vector<uint8_t>& input);
-//}
+#include <optional> // For optional values
 
 class UE : public Entity {
 public:
@@ -46,31 +36,37 @@ public:
                                      const std::vector<uint8_t>& rho,
                                      const Kyber::Polynomial& pk);
 
-    // --- Authentication & Connection ---
+    // --- UAV-Assisted UE Access Authentication (Phase B) ---
+    // Modified InitiateConnection to send SUCI
+    void InitiateConnection(UAV& targetUAV); // Sends SUCI
 
-    // Initiates the first connection via a UAV to gNB by sending SUCI
-    void InitiateConnection(UAV& targetUAV);
+    // Handle response from UAV (HRES*i, Ci)
+    void HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
+                                       const std::vector<uint8_t>& ci,
+                                       const std::string& tid_j); // UAV's TID needed for KUAVi calc
 
-    // --- Handlers for gNB Responses (called by UAV) ---
-    void HandleAuthResponse(const std::vector<uint8_t>& res_star);
-    void HandleSyncFailure(const std::vector<uint8_t>& auts);
-    void HandleMacFailure();
-    void HandleGnbConnectionFailure(); // Called by UAV if gNB unreachable
+    // --- UE Handover Authentication (Phase C) ---
+    // Initiate handover authentication with a target UAV
+    void InitiateHandoverAuthentication(UAV& targetUAV);
 
-    // UE initiates handover to a new UAV (no gNB involvement directly)
-    void InitiateHandover(UAV& currentUAV, UAV& targetUAV);
+    // Handle challenge (HRESi, R2) from target UAV
+    void HandleHandoverAuthChallenge(const std::vector<uint8_t>& hres_i,
+                                     const std::vector<uint8_t>& r2);
 
+    // --- Connection Management ---
     void ConfirmConnection(std::shared_ptr<UAV> uav, std::shared_ptr<gNB> gnb);
 
     void ConfirmHandover(std::shared_ptr<UAV> newUAV);
-
-    // Called when the serving UAV instructs UE to handover (e.g., due to UAV failure)
-    void ReceiveHandoverCommand(UAV& targetUAV);
 
     void Disconnect();
 
     inline int GetServingUAVId() const { return m_ServingUAVId; }
     inline const std::string& GetState() const { return m_UEState; }
+
+    // --- Handlers for Standard AKA Failures (called by UAV) ---
+    void HandleSyncFailure(const std::vector<uint8_t>& auts);
+    void HandleMacFailure();
+    void HandleGnbConnectionFailure(); // Called by UAV if gNB unreachable
 
 private:
     // Generates a random 256-bit value
@@ -106,4 +102,20 @@ private:
     std::vector<uint8_t> m_K_network;   // e.g., K_AMF
     std::vector<uint8_t> m_K_RAN;       // Key for RAN communication
 
+    // --- New State for UAV Protocol ---
+    std::string m_TIDi = ""; // Temporary Identity assigned by gNB
+    std::vector<uint8_t> m_KUAVi; // Key shared with current serving UAV
+    std::vector<uint8_t> m_Tokeni; // Token received from gNB (TGKi || TST)
+    std::vector<uint8_t> m_TGKi; // Temporary Group Key derived from Token
+    Kyber::Timestamp m_TST; // Expiration time from Token
+
+    std::vector<uint8_t> m_KRANi; // Key derived during AKA with gNB
+
+    // State during handover
+    std::vector<uint8_t> m_Handover_R1; // Store R1 during handover
+    std::string m_Handover_TargetTIDj = ""; // Store Target UAV TIDj during handover
+    std::weak_ptr<UAV> m_Handover_TargetUAV; // Store target UAV during handover
+
+    // Helper to get connected UAV shared_ptr
+    std::shared_ptr<UAV> GetConnectedUAVShared() const;
 };

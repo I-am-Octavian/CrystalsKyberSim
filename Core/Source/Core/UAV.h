@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity.h"
+#include "KyberUtils.h" // Include Kyber utilities
 
 class gNB;
 class UAV;
@@ -12,6 +13,9 @@ class UE;
 #include <vector>
 #include <memory>
 #include <map>
+#include <string> // For TID
+#include <optional> // For optional values
+#include <functional>
 
 // Unmanned Aerial Vehicle class (acts as a relay)
 class UAV : public Entity {
@@ -30,16 +34,59 @@ public:
         std::cout << "UAV " << m_Id << ": Operational status set to " << (status ? "true" : "false") << std::endl;
     }
 
-    // --- Authentication & Connection Placeholders ---
+    // --- UAV Service Access Authentication (Phase A) ---
+    // Called by gNB after successful AKA steps
+    void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j, const std::vector<uint8_t>& cj);
+    // Called by UAV after verifying HRES*j
+    void ConfirmServiceAccessAuth(); // Sends confirmation to gNB
 
-    // Receive connection request (SUCI) from UE
-    void ReceiveConnectionRequest(int ueId, // Pass UE ID instead of object ref
-                                  const std::vector<uint8_t>& c1_bytes,
-                                  const std::vector<uint8_t>& c2_bytes,
-                                  const std::vector<uint8_t>& mac_bytes);
+    // --- UAV-Assisted UE Access Authentication (Phase B) ---
+    // Modified ReceiveConnectionRequest to include TIDj
+    void ReceiveConnectionRequest(int ueId,
+                                  const std::vector<uint8_t>& suci_bytes); // SUCI includes C1, C2, MAC
+
+    // Called by gNB to forward UE auth params
+    void ReceiveUEAuthParams(int ueId,
+                             const std::vector<uint8_t>& hres_star_i,
+                             const std::vector<uint8_t>& ci,
+                             const std::string& tid_i,
+                             const std::vector<uint8_t>& kuav_i);
+
+    // --- UE Handover Authentication (Phase C) ---
+    // Receive handover request from UE
+    void ReceiveHandoverAuthRequest(int ueId,
+                                    const std::string& tid_i,
+                                    const std::vector<uint8_t>& mac_i,
+                                    const std::vector<uint8_t>& r1,
+                                    const Kyber::Timestamp& tst);
+
+    // Receive handover confirmation from UE
+    void ReceiveHandoverAuthConfirmation(int ueId, const std::vector<uint8_t>& xres_i);
+
+    // --- General ---
+    inline const std::string& GetTID() const { return m_TIDj; }
+    inline bool IsAuthenticatedWithGNB() const { return m_IsAuthenticatedWithGNB; }
+    void BroadcastNotification(); // Broadcast TIDj
+
+    // Placeholder for finding UE (replace with World lookup)
+    virtual std::shared_ptr<UE> FindUEById(int ueId) 
+    {
+        if (findUEHandler)
+            return findUEHandler(ueId);
+        else
+            return nullptr; 
+    }
+    // Placeholder for getting self shared_ptr (replace with World mechanism or pass shared_ptr)
+    virtual std::shared_ptr<UAV> GetSelfPtr() 
+    {
+        if (getSelfPtrHandler)
+            return getSelfPtrHandler();
+        else
+            return nullptr;
+    }
 
     // --- Methods called by gNB to forward results to UE ---
-    void SendAuthResponseToUE(int ueId, const std::vector<uint8_t>& res_star);
+    //void SendAuthResponseToUE(int ueId, const std::vector<uint8_t>& res_star);
     void SendSyncFailureToUE(int ueId, const std::vector<uint8_t>& auts);
     void SendMacFailureToUE(int ueId);
 
@@ -58,9 +105,33 @@ public:
     // Get list of connected UE IDs (for gNB during failure handover)
     std::vector<int> GetConnectedUEIds() const;
 
+    std::function<std::shared_ptr<UE>(int)> findUEHandler;
+    std::function<std::shared_ptr<UAV>()> getSelfPtrHandler;
+
 private:
     std::weak_ptr<gNB> m_ConnectedgNB; // The gNB this UAV is associated with
     std::map<int, std::weak_ptr<UE>> m_ConnectedUEs; // UEs connected via this UAV
     bool m_Operational = true; // Status flag
+
+    bool m_IsAuthenticatedWithGNB = false;
+    std::string m_TIDj = ""; // Temporary Identity assigned by gNB
+    std::vector<uint8_t> m_KRANj; // Key derived during UAV auth with gNB
+    std::vector<uint8_t> m_GKUAV; // Group Key for UAVs
+
+    // State for ongoing authentications
+    std::map<int, std::vector<uint8_t>> m_PendingUEAuth_C1; // Store C1 from SUCI temporarily if needed
+    std::map<int, std::vector<uint8_t>> m_PendingUEAuth_RES_star_i; // Store RES*i for UE confirmation
+
+    // State for UE connections established via this UAV
+    struct UEConnectionInfo {
+        std::string tid_i;
+        std::vector<uint8_t> kuav_i; // Key between UE and this UAV
+        std::vector<uint8_t> r1; // Store R1 during handover
+        std::vector<uint8_t> expected_res_i; // Store RESi during handover
+    };
+    std::map<int, UEConnectionInfo> m_ConnectedUEInfo; // Map UE ID -> Info
+
+    // Helper to get associated gNB shared_ptr
+    std::shared_ptr<gNB> GetAssociatedGNBShared() const;
 
 };

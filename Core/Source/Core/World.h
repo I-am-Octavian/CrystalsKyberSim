@@ -4,6 +4,7 @@
 #include "gNB.h"
 #include "UAV.h"
 #include <limits> // Include limits for numeric_limits
+#include <stdexcept> // For exceptions
 
 class World {
 public:
@@ -34,12 +35,12 @@ public:
         }
         for (auto& uav : uavs) {
             std::shared_ptr<gNB> nearestGNB = gnbs[0];
-            float minDistance = std::numeric_limits<float>::max();
+            uint32_t minDistance = std::numeric_limits<uint32_t>::max();
 
             for (auto& gnb : gnbs) {
-                float dx = uav->GetPosition().first - gnb->GetPosition().first;
-                float dy = uav->GetPosition().second - gnb->GetPosition().second;
-                float distSq = dx * dx + dy * dy;
+                uint32_t dx = uav->GetPosition().first - gnb->GetPosition().first;
+                uint32_t dy = uav->GetPosition().second - gnb->GetPosition().second;
+                uint32_t distSq = dx * dx + dy * dy;
                 if (distSq < minDistance) {
                     minDistance = distSq;
                     nearestGNB = gnb;
@@ -73,99 +74,91 @@ public:
         std::cout << "World: UE provisioning complete." << std::endl;
     }
 
-    // --- Simulation Scenario Placeholders ---
+    void setupInfrastructure() {
+        std::cout << "\n--- Setting up Infrastructure ---" << std::endl;
+        if (gnbs.empty()) {
+             std::cerr << "World Error: No gNBs defined." << std::endl;
+             return;
+        }
+        // Assume one gNB for simplicity
+        auto gnb = gnbs[0];
+        gnb->GenerateGroupKey(); // Generate GKUAV
+        setupAssociations(); // Associate UAVs
+        provisionUEs(); // Provision UEs with gNB params
+        std::cout << "--- Infrastructure Setup Complete ---" << std::endl;
+    }
 
-    void simulateInitialConnection(int ueId) {
+    // --- Simulation Scenarios ---
+
+    // Phase A: Authenticate a UAV with the gNB
+    void simulateUAVServiceAuthentication(int uavId) {
+         std::cout << "\n--- Simulating UAV Service Authentication for UAV " << uavId << " ---" << std::endl;
+         auto uav = findUAV(uavId);
+         if (!uav) {
+             std::cerr << "World Error: UAV " << uavId << " not found." << std::endl;
+             return;
+         }
+         if (auto gnb = uav->GetAssociatedGNB().lock()) {
+             gnb->InitiateUAVServiceAccessAuth(uavId);
+             // Note: The rest of Phase A happens via callbacks between gNB and UAV
+         } else {
+             std::cerr << "World Error: UAV " << uavId << " has no associated gNB." << std::endl;
+         }
+    }
+
+    // Phase B: UE connects via an authenticated UAV
+    void simulateUAVAssistedConnection(int ueId) {
+        std::cout << "\n--- Simulating UAV-Assisted Connection for UE " << ueId << " ---" << std::endl;
         auto ue = findUE(ueId);
         if (!ue) {
-            std::cerr << "UE " << ueId << " not found." << std::endl;
+            std::cerr << "World Error: UE " << ueId << " not found." << std::endl;
             return;
         }
 
-        auto targetUAV = findNearestAvailableUAV(ue->GetPosition());
+        // Find nearest *authenticated* and operational UAV
+        auto targetUAV = findNearestAuthenticatedUAV(ue->GetPosition());
         if (targetUAV) {
-            std::cout << "\n--- Simulating Initial Connection for UE " << ueId << " ---" << std::endl;
-
-            std::cout << "UE " << ueId << " -> UAV " << targetUAV->GetID() << ": Authentication Request (SUCI)" << std::endl;
+            std::cout << "World: UE " << ueId << " found nearest authenticated UAV " << targetUAV->GetID() << " (TIDj=" << targetUAV->GetTID() << ")" << std::endl;
             ue->InitiateConnection(*targetUAV);
+            // Note: The rest of Phase B happens via callbacks: UE -> UAV -> gNB -> UAV -> UE
         } else {
-            std::cerr << "No available UAV found for UE " << ueId << std::endl;
+            std::cerr << "World Error: No available authenticated UAV found for UE " << ueId << std::endl;
         }
     }
 
-    void simulateUEInitiatedHandover(int ueId, int targetUavId) {
-        auto ue = findUE(ueId);
-        auto targetUAV = findUAV(targetUavId);
-        if (!ue || !targetUAV) {
-            std::cerr << "UE or Target UAV not found." << std::endl;
-            return;
-        }
-        if (!targetUAV->IsOperational()) {
-            std::cerr << "Target UAV " << targetUavId << " is not operational." << std::endl;
-            return;
-        }
+    // Phase C: UE Handover between authenticated UAVs
+    void simulateUEHandoverAuthentication(int ueId, int targetUavId) {
+         std::cout << "\n--- Simulating UE Handover Authentication for UE " << ueId << " to UAV " << targetUavId << " ---" << std::endl;
+         auto ue = findUE(ueId);
+         auto targetUAV = findUAV(targetUavId);
 
-        auto currentUAV = findUAV(ue->GetServingUAVId());
-        if (!currentUAV) {
-            std::cerr << "UE " << ueId << " is not connected or current UAV not found." << std::endl;
-            return;
-        }
+         if (!ue) {
+             std::cerr << "World Error: UE " << ueId << " not found." << std::endl;
+             return;
+         }
+         if (!targetUAV) {
+              std::cerr << "World Error: Target UAV " << targetUavId << " not found." << std::endl;
+              return;
+         }
+         if (!targetUAV->IsOperational() || !targetUAV->IsAuthenticatedWithGNB()) {
+             std::cerr << "World Error: Target UAV " << targetUavId << " is not operational or not authenticated." << std::endl;
+             return;
+         }
+         if (ue->GetServingUAVId() == targetUavId) {
+              std::cerr << "World Error: UE " << ueId << " already connected to target UAV " << targetUavId << "." << std::endl;
+              return;
+         }
 
-        std::cout << "\n--- Simulating UE-Initiated Handover for UE " << ueId << " to UAV " << targetUavId << " ---" << std::endl;
-        currentUAV->ReleaseUE(ueId);
-        ue->ConfirmHandover(targetUAV);
-    }
+         // Check if UE has necessary state from Phase B
+         // (Simplified check - just see if state is Connected)
+         if (ue->GetState() != "Connected") {
+              std::cerr << "World Error: UE " << ueId << " is not in Connected state. Cannot initiate handover auth." << std::endl;
+              return;
+         }
 
-    void simulateUAVFailureHandover(int failedUavId) {
-        auto failedUAV = findUAV(failedUavId);
-        if (!failedUAV) {
-            std::cerr << "UAV " << failedUavId << " not found." << std::endl;
-            return;
-        }
-        if (!failedUAV->IsOperational()) {
-            std::cerr << "UAV " << failedUavId << " already not operational." << std::endl;
-            return;
-        }
 
-        std::cout << "\n--- Simulating UAV Failure Handover for UAV " << failedUavId << " ---" << std::endl;
-        failedUAV->SetOperationalStatus(false);
-
-        std::shared_ptr<gNB> responsibleGNB = nullptr;
-        for (const auto& gnb : gnbs) {
-            responsibleGNB = gnb;
-            break;
-        }
-
-        if (responsibleGNB) {
-            auto affectedUEIds = failedUAV->GetConnectedUEIds();
-            std::cout << "   gNB " << responsibleGNB->GetID() << " handling failure for UAV " << failedUavId << ". Affected UEs: ";
-            for (int id : affectedUEIds) std::cout << id << " ";
-            std::cout << std::endl;
-
-            for (int ueId : affectedUEIds) {
-                auto ue = findUE(ueId);
-                if (!ue) continue;
-
-                auto targetUAV = findBestAlternativeUAVForGNB(ue->GetPosition(), failedUavId, responsibleGNB);
-
-                if (targetUAV) {
-                    std::cout << "   gNB instructing UE " << ueId << " to handover to UAV " << targetUAV->GetID() << std::endl;
-                    failedUAV->ReleaseUE(ueId);
-                    ue->ConfirmHandover(targetUAV);
-                } else {
-                    std::cout << "   gNB could not find alternative UAV for UE " << ueId << ". Disconnecting." << std::endl;
-                    ue->Disconnect();
-                    failedUAV->ReleaseUE(ueId);
-                }
-            }
-        } else {
-            std::cerr << "No gNB found to handle UAV " << failedUavId << " failure." << std::endl;
-            auto affectedUEIds = failedUAV->GetConnectedUEIds();
-            for (int ueId : affectedUEIds) {
-                auto ue = findUE(ueId);
-                if (ue) ue->Disconnect();
-            }
-        }
+         ue->InitiateHandoverAuthentication(*targetUAV);
+         // Note: The rest of Phase C happens via callbacks: UE -> TargetUAV -> UE -> TargetUAV -> gNB
     }
 
     // --- Helper Methods ---
@@ -192,13 +185,32 @@ public:
 
     std::shared_ptr<UAV> findNearestAvailableUAV(const Position& pos) {
         std::shared_ptr<UAV> bestUAV = nullptr;
-        float minDistSq = std::numeric_limits<float>::max();
+        uint32_t minDistSq = std::numeric_limits<uint32_t>::max();
 
         for (auto& uav : uavs) {
             if (uav->IsOperational()) {
-                float dx = uav->GetPosition().first - pos.first;
-                float dy = uav->GetPosition().second - pos.second;
-                float distSq = dx * dx + dy * dy;
+                uint32_t dx = uav->GetPosition().first - pos.first;
+                uint32_t dy = uav->GetPosition().second - pos.second;
+                uint32_t distSq = dx * dx + dy * dy;
+                if (distSq < minDistSq) {
+                    minDistSq = distSq;
+                    bestUAV = uav;
+                }
+            }
+        }
+        return bestUAV;
+    }
+
+    std::shared_ptr<UAV> findNearestAuthenticatedUAV(const Position& pos) {
+        std::shared_ptr<UAV> bestUAV = nullptr;
+        uint32_t minDistSq = std::numeric_limits<uint32_t>::max();
+
+        for (auto& uav : uavs) {
+            // Check operational status AND if authenticated with gNB
+            if (uav->IsOperational() && uav->IsAuthenticatedWithGNB()) {
+                uint32_t dx = uav->GetPosition().first - pos.first;
+                uint32_t dy = uav->GetPosition().second - pos.second;
+                uint32_t distSq = dx * dx + dy * dy;
                 if (distSq < minDistSq) {
                     minDistSq = distSq;
                     bestUAV = uav;
@@ -210,7 +222,7 @@ public:
 
     std::shared_ptr<UAV> findBestAlternativeUAVForGNB(const Position& uePos, int failedUavId, std::shared_ptr<gNB> gnb) {
         std::shared_ptr<UAV> bestUAV = nullptr;
-        float minDistSq = std::numeric_limits<float>::max();
+        uint32_t minDistSq = std::numeric_limits<uint32_t>::max();
 
         for (auto& uav : uavs) {
             if (uav->GetID() != failedUavId && uav->IsOperational()) {
@@ -219,9 +231,9 @@ public:
                     if (assoc_gnb->GetID() == gnb->GetID()) associated = true;
                 }
 
-                float dx = uav->GetPosition().first - uePos.first;
-                float dy = uav->GetPosition().second - uePos.second;
-                float distSq = dx * dx + dy * dy;
+                uint32_t dx = uav->GetPosition().first - uePos.first;
+                uint32_t dy = uav->GetPosition().second - uePos.second;
+                uint32_t distSq = dx * dx + dy * dy;
                 if (distSq < minDistSq) {
                     minDistSq = distSq;
                     bestUAV = uav;
@@ -243,5 +255,17 @@ public:
         for (const auto& uav : uavs) { positions.push_back({ uav->GetType() + std::to_string(uav->GetID()), uav->GetPosition() }); }
         for (const auto& gnb : gnbs) { positions.push_back({ gnb->GetType() + std::to_string(gnb->GetID()), gnb->GetPosition() }); }
         return positions;
+    }
+
+    void linkEntities() {
+        std::cout << "World: Linking entities..." << std::endl;
+        for(auto& uav : uavs) {
+            // Hacky way to allow UAV to find UEs - inject find function
+            uav->findUEHandler = [this](int ueId) { return this->findUE(ueId); };
+            // Hacky way to allow UAV to get shared_ptr to itself
+            uav->getSelfPtrHandler = [uav]() { return uav; };
+        }
+         // Similar linking could be done for UE finding UAVs if needed
+         std::cout << "World: Entity linking complete." << std::endl;
     }
 };
