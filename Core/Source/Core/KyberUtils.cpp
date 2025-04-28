@@ -11,6 +11,8 @@
 
 namespace Kyber {
 
+    std::vector<uint8_t> RandValue = { 0 };
+
     // --- Placeholder Function Implementations ---
 
     std::pair<std::vector<uint8_t>, std::vector<uint8_t>> G(const std::vector<uint8_t>& d) {
@@ -118,17 +120,22 @@ namespace Kyber {
         }
         // Pad or truncate to expected size if needed (e.g., size 1 for RAND)
         if (result.empty()) result.push_back(0); // Ensure not empty
+
+        // TODO
+        // Placeholder
+        RandValue = input;
         return result; // Return Polynomial
     }
 
     std::vector<uint8_t> Compressq(const Polynomial& input, int parameter) {
         std::cout << "Warning: Using placeholder implementation for Compressq" << std::endl;
+        return RandValue;
         // Simple conversion for placeholder, assuming 1 byte per coeff
         std::vector<uint8_t> result;
         for(int val : input) {
             result.push_back(static_cast<uint8_t>(val & 0xFF)); // No actual compression
         }
-         if (result.empty()) result.push_back(0); // Ensure not empty
+         if (result.empty()) result.push_back(0); // Ensure not 
         return result;
     }
 

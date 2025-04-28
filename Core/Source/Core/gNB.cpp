@@ -256,7 +256,7 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
     std::cout << "gNB " << m_Id << ": Parsed SUCI (C1 size=" << c1_bytes.size() << ", C2 size=" << c2_bytes.size() << ", MAC size=" << mac_bytes.size() << ")" << std::endl;
 
     std::cout << "gNB " << m_Id << ": (Placeholder) Decrypting C1..." << std::endl;
-    out_rand_prime = GenerateRandomBytesUtil(32);
+    out_rand_prime = Kyber::Compressq(Kyber::Polynomial(), 1);
     std::cout << "gNB " << m_Id << ": (Placeholder) Got RAND' (size=" << out_rand_prime.size() << ")" << std::endl;
 
     std::vector<uint8_t> msk_prime = Kyber::KDF(out_rand_prime);
@@ -310,6 +310,8 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
 
 std::vector<uint8_t> gNB::DeriveKRAN(const std::string& id, const std::vector<uint8_t>& rand_prime) {
     std::cout << "gNB " << m_Id << ": (Placeholder) Deriving KRAN for " << id << std::endl;
+    return Kyber::KDF(Kyber::StringToBytes(m_UEKeys[id]), rand_prime);
+
     std::string key_material = "KRAN_for_" + id;
     std::vector<uint8_t> input = Kyber::StringToBytes(key_material);
     input.insert(input.end(), rand_prime.begin(), rand_prime.end());

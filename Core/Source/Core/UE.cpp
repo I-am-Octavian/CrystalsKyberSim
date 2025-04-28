@@ -55,7 +55,7 @@ void UE::HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
     // Need RAND from the initial GenerateAuthParams call.
     // Need K (long term key).
     // Placeholder: Derive KRANi (should use CK/IK derived from K and RAND)
-    m_KRANi = Kyber::KDF(Kyber::StringToBytes(m_LongTermKey + "_KRANi"), m_RAND); // Placeholder KRANi
+    m_KRANi = Kyber::KDF(Kyber::StringToBytes(m_LongTermKey), m_RAND); // Placeholder KRANi
     std::cout << "UE " << m_Id << ": Derived KRANi (size=" << m_KRANi.size() << ")" << std::endl;
 
 
