@@ -246,8 +246,8 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
         std::cerr << "gNB " << m_Id << ": Error - SUCI too short!" << std::endl;
         return false;
     }
-    size_t mac_size = 16;
-    size_t c2_size = 20;
+    size_t mac_size = 42;
+    size_t c2_size = 18;
     size_t c1_size = suci_bytes.size() - c2_size - mac_size;
     std::vector<uint8_t> c1_bytes(suci_bytes.begin(), suci_bytes.begin() + c1_size);
     std::vector<uint8_t> c2_bytes(suci_bytes.begin() + c1_size, suci_bytes.begin() + c1_size + c2_size);

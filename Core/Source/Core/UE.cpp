@@ -411,8 +411,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     }
 
     // Step 11: Compute C2 = EMSK(SUPI || SQNUE)
-    std::string SUPI = "SUPI_" + std::to_string(m_Id); // Example SUPI
-    m_SUPI = SUPI;
+    const std::string& SUPI = m_SUPI;
 
     std::vector<uint8_t> supiBytes(SUPI.begin(), SUPI.end());
     std::vector<uint8_t> supiAndSqn;

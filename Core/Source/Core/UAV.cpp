@@ -113,7 +113,7 @@ void UAV::ReceiveServiceAccessAuthParams(const std::vector<uint8_t> &hres_star_j
 
         // Parse TIDj and GKUAV from decrypted_cj
         // Assuming format: [TIDj_bytes][GKUAV_bytes]
-        size_t tid_len = 10; // Example fixed length, must match gNB's generation
+        size_t tid_len = 20; // Example fixed length, must match gNB's generation
         if (decrypted_cj.size() > tid_len)
         {
             m_TIDj = Kyber::BytesToString(std::vector<uint8_t>(decrypted_cj.begin(), decrypted_cj.begin() + tid_len));
