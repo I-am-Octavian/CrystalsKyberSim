@@ -94,7 +94,7 @@ void UE::HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
 
     // Parse TID'i and Token'i
     // Assuming format: [TIDi_bytes][Tokeni_bytes = TGKi || TST]
-    size_t tid_len = 10; // Example fixed length, must match gNB's generation
+    size_t tid_len = 19; // Example fixed length, must match gNB's generation
     size_t tst_len = sizeof(long long); // Timestamp bytes length
     if (decrypted_ci.size() <= tid_len) {
          std::cerr << "UE " << m_Id << ": Error - Decrypted Ci too short to contain TIDi." << std::endl;
