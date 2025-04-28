@@ -16,6 +16,7 @@ class UE;
 #include <string> // For TID
 #include <optional> // For optional values
 #include <functional>
+#include <string>
 
 // Unmanned Aerial Vehicle class (acts as a relay)
 class UAV : public Entity {
@@ -34,9 +35,15 @@ public:
         std::cout << "UAV " << m_Id << ": Operational status set to " << (status ? "true" : "false") << std::endl;
     }
 
+    void SetLongTermKey(const std::string& key);
+
     // --- UAV Service Access Authentication (Phase A) ---
     // Called by gNB after successful AKA steps
-    void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j, const std::vector<uint8_t>& cj);
+    // void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j, const std::vector<uint8_t>& cj);
+    void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j,
+        const std::vector<uint8_t>& cj,
+        const std::vector<uint8_t>& rand_prime); // Add rand_prime
+
     // Called by UAV after verifying HRES*j
     void ConfirmServiceAccessAuth(); // Sends confirmation to gNB
 
@@ -112,6 +119,13 @@ private:
     std::weak_ptr<gNB> m_ConnectedgNB; // The gNB this UAV is associated with
     std::map<int, std::weak_ptr<UE>> m_ConnectedUEs; // UEs connected via this UAV
     bool m_Operational = true; // Status flag
+
+    std::string m_LongTermKey_Kj; // UAV's long-term key
+    std::vector<uint8_t> m_Current_RAND_j; // Store RAND' for current session
+    std::vector<uint8_t> m_Derived_CKj; // Derived CKj
+    std::vector<uint8_t> m_Derived_IKj; // Derived IKj
+    std::vector<uint8_t> m_Derived_RESj; // Derived RESj
+
 
     bool m_IsAuthenticatedWithGNB = false;
     std::string m_TIDj = ""; // Temporary Identity assigned by gNB

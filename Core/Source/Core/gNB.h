@@ -17,6 +17,7 @@ class UE;
 #include <vector>
 #include <set> // For authorized UAVs
 #include <random>
+#include <string>
 
 
 // Helper to generate random bytes (can be moved to a common utility)
@@ -55,6 +56,9 @@ public:
 
     // Store UE's long-term key K (provisioning step)
     void ProvisionUEKey(const std::string& supi, const std::string& key);
+
+    void ProvisionUAVKey(int uavId, const std::string& key);
+
 
     // Process authentication request (SUCI) forwarded by a UAV
     // SUCI = C1 || C2 || MAC || Other (Other is ignored for now)
@@ -102,6 +106,8 @@ private:
     std::map<int, std::weak_ptr<UAV>> m_RegisteredUAVs; // UAVs associated with this gNB
     std::string m_PublicKey = "NULL"; // Legacy?
     std::string m_PrivateKey = "NULL"; // Legacy?
+
+    std::map<int, std::string> m_UAVKeys;
 
     // Kyber and Protocol Parameters
     std::vector<uint8_t> m_Kyber_d;      // Initial seed

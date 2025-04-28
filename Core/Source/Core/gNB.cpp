@@ -34,6 +34,11 @@ void gNB::ProvisionUEKey(const std::string& supi, const std::string& key) {
     std::cout << "gNB " << m_Id << ": Provisioned key for SUPI " << supi << std::endl;
 }
 
+void gNB::ProvisionUAVKey(int uavId, const std::string& key) {
+    std::cout << "gNB " << m_Id << ": Provisioning key for UAV " << uavId << std::endl;
+    m_UAVKeys[uavId] = key;
+}
+
 void gNB::GenerateGroupKey() {
     m_GKUAV = GenerateRandomBytesUtil(32); // Example 32-byte group key
     std::cout << "gNB " << m_Id << ": Generated new Group Key GKUAV (size=" << m_GKUAV.size() << ")" << std::endl;
@@ -55,46 +60,71 @@ void gNB::InitiateUAVServiceAccessAuth(int uavId) {
         return;
     }
     auto uav = uav_it->second.lock();
-    if (!uav) {
-         std::cerr << "gNB " << m_Id << ": Cannot initiate auth. UAV " << uavId << " pointer invalid." << std::endl;
-         return;
-    }
+     if (!uav) {
+          std::cerr << "gNB " << m_Id << ": Cannot initiate auth. UAV " << uavId << " pointer invalid." << std::endl;
+          return;
+     }
 
-    std::cout << "gNB " << m_Id << ": (Placeholder) Assuming AKA Steps 1-3 successful for UAV " << uavId << "." << std::endl;
-
-    bool uav_authorized = true; // Placeholder check
-    if (!uav_authorized) {
-        std::cerr << "gNB " << m_Id << ": UAV " << uavId << " is not authorized." << std::endl;
+    // Retrieve UAV's long-term key Kj
+    if (m_UAVKeys.find(uavId) == m_UAVKeys.end()) {
+        std::cerr << "gNB " << m_Id << ": Error - Long term key Kj not found for UAV " << uavId << "." << std::endl;
         return;
     }
-    std::cout << "gNB " << m_Id << ": UAV " << uavId << " is authorized." << std::endl;
+    const std::string& uav_key_Kj = m_UAVKeys[uavId];
+    std::cout << "gNB " << m_Id << ": Retrieved key Kj for UAV " << uavId << "." << std::endl;
 
+    // --- Start AKA Steps ---
+    // Step 1 & 2 (Simplified gNB side): Generate RAND', derive keys
+    std::vector<uint8_t> rand_prime = GenerateRandomBytesUtil(32); // Generate fresh RAND'
+    std::cout << "gNB " << m_Id << ": Generated RAND' for UAV " << uavId << " (size=" << rand_prime.size() << ")" << std::endl;
+
+    // Derive CKj, IKj, RESj from Kj and RAND'
+    std::vector<uint8_t> ckj = Kyber::f3K(uav_key_Kj, rand_prime);
+    std::vector<uint8_t> ikj = Kyber::f4K(uav_key_Kj, rand_prime);
+    std::vector<uint8_t> resj = Kyber::f2K(uav_key_Kj, rand_prime); // RESj
+    std::cout << "gNB " << m_Id << ": Derived CKj, IKj, RESj for UAV " << uavId << "." << std::endl;
+
+    // Derive KRANj = KDF(CKj || IKj, "KRAN") - "KRAN" is an example label
+    std::vector<uint8_t> kran_key = ckj;
+    kran_key.insert(kran_key.end(), ikj.begin(), ikj.end());
+    std::vector<uint8_t> kran_j = Kyber::KDF(kran_key, Kyber::StringToBytes("KRAN"));
+    m_UAV_KRANj[uavId] = kran_j; // Store KRANj
+    std::cout << "gNB " << m_Id << ": Derived KRANj for UAV " << uavId << " (size=" << kran_j.size() << ")" << std::endl;
+
+    // Step 3 (gNB side): Calculate RES*j = KDF(CKj || IKj, SNN || RAND' || RESj)
+    std::vector<uint8_t> res_star_input = Kyber::StringToBytes(m_ServingNetworkName);
+    res_star_input.insert(res_star_input.end(), rand_prime.begin(), rand_prime.end());
+    res_star_input.insert(res_star_input.end(), resj.begin(), resj.end());
+    std::vector<uint8_t> res_star_j = Kyber::KDF(kran_key, res_star_input); // Using CK||IK as key
+    std::cout << "gNB " << m_Id << ": Calculated RES*j for UAV " << uavId << " (size=" << res_star_j.size() << ")" << std::endl;
+
+    // --- End AKA Steps ---
+
+    // Step 4: Generate TIDj, compute Cj, HRES*j
     if (m_GKUAV.empty()) {
-        GenerateGroupKey(); // Generate if not already done
+        GenerateGroupKey();
     }
 
     std::string tid_j = Kyber::GenerateTID("TID_UAV_" + std::to_string(uavId));
-    m_UAV_TIDj[uavId] = tid_j;
+    m_UAV_TIDj[uavId] = tid_j; // Store TIDj
 
-    std::vector<uint8_t> rand_prime_j = GenerateRandomBytesUtil(32); // Placeholder RAND'
-    std::vector<uint8_t> kran_j = DeriveKRAN("UAV_" + std::to_string(uavId), rand_prime_j);
-    m_UAV_KRANj[uavId] = kran_j;
-    std::cout << "gNB " << m_Id << ": Derived KRANj for UAV " << uavId << " (size=" << kran_j.size() << ")" << std::endl;
-
+    // Compute Cj = E_KRANj(TIDj || GKUAV)
     std::vector<uint8_t> tidj_bytes = Kyber::StringToBytes(tid_j);
     std::vector<uint8_t> cj_plaintext = tidj_bytes;
     cj_plaintext.insert(cj_plaintext.end(), m_GKUAV.begin(), m_GKUAV.end());
     std::vector<uint8_t> cj = Kyber::EncryptSymmetric(kran_j, cj_plaintext);
     std::cout << "gNB " << m_Id << ": Computed Cj for UAV " << uavId << " (size=" << cj.size() << ")" << std::endl;
 
-    std::vector<uint8_t> res_star_j = Kyber::KDF(kran_j, Kyber::StringToBytes("placeholder_res_star_j")); // Placeholder RES*j
+    // Compute HRES*j = KDF(KRANj, Cj || RES*j)
     std::vector<uint8_t> hres_input = cj;
     hres_input.insert(hres_input.end(), res_star_j.begin(), res_star_j.end());
     std::vector<uint8_t> hres_star_j = Kyber::KDF(kran_j, hres_input);
     std::cout << "gNB " << m_Id << ": Computed HRES*j for UAV " << uavId << " (size=" << hres_star_j.size() << ")" << std::endl;
 
-    std::cout << "gNB " << m_Id << ": Sending (HRES*j, Cj) to UAV " << uavId << std::endl;
-    uav->ReceiveServiceAccessAuthParams(hres_star_j, cj);
+    // Send (HRES*j, Cj, RAND') to UAV
+    std::cout << "gNB " << m_Id << ": Sending (HRES*j, Cj, RAND') to UAV " << uavId << std::endl;
+    // Pass RAND' so UAV can perform its calculations
+    uav->ReceiveServiceAccessAuthParams(hres_star_j, cj, rand_prime);
 }
 
 void gNB::ReceiveServiceAccessConfirmation(int uavId) {

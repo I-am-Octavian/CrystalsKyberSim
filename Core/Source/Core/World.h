@@ -5,6 +5,7 @@
 #include "UAV.h"
 #include <limits> // Include limits for numeric_limits
 #include <stdexcept> // For exceptions
+#include <string> // Ensure string is included
 
 class World {
 public:
@@ -74,15 +75,32 @@ public:
         std::cout << "World: UE provisioning complete." << std::endl;
     }
 
+    void provisionUAVs() {
+        std::cout << "\n--- Provisioning UAV Keys ---" << std::endl;
+        if (gnbs.empty()) {
+            std::cerr << "World Error: No gNBs to provision UAVs." << std::endl;
+            return;
+        }
+        auto gnb = gnbs[0]; // Assume one gNB
+
+        for (auto& uav : uavs) {
+            // Simple key generation for simulation: "UAV_KEY_" + ID
+            std::string uav_key = "UAV_KEY_" + std::to_string(uav->GetID());
+            uav->SetLongTermKey(uav_key);
+            gnb->ProvisionUAVKey(uav->GetID(), uav_key);
+        }
+        std::cout << "--- UAV Key Provisioning Complete ---" << std::endl;
+    }
+
     void setupInfrastructure() {
         std::cout << "\n--- Setting up Infrastructure ---" << std::endl;
         if (gnbs.empty()) {
              std::cerr << "World Error: No gNBs defined." << std::endl;
              return;
         }
-        // Assume one gNB for simplicity
         auto gnb = gnbs[0];
         gnb->GenerateGroupKey(); // Generate GKUAV
+        provisionUAVs(); // Provision UAV keys
         setupAssociations(); // Associate UAVs
         provisionUEs(); // Provision UEs with gNB params
         std::cout << "--- Infrastructure Setup Complete ---" << std::endl;
