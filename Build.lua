@@ -7,6 +7,9 @@ workspace "CrystalsKyberSim"
    -- Workspace-wide build options for MSVC
    filter "system:windows"
       buildoptions { "/EHsc", "/Zc:preprocessor", "/Zc:__cplusplus", "/MP", "/arch:AVX2", "/openmp"}
+   
+   filter "system:linux"
+      buildoptions { "-mavx2", "-march=native"}
 
 OutputDir = "%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}"
 

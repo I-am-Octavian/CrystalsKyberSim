@@ -9,7 +9,7 @@
 
 extern "C"
 {
-#include "api.h"
+#include "./kyber/ref/api.h"
 }
 
 namespace Kyber {
@@ -58,8 +58,8 @@ namespace Kyber {
 
     std::pair<std::vector<uint8_t>, std::vector<uint8_t>> GenerateKeyPair();
 
-    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t> secret);
-    std::vector<uint8_t> Decrypt(Polynomial sk, std::vector<uint8_t> cipher);
+    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t>& secret);
+    std::vector<uint8_t> Decrypt(Polynomial sk, const std::vector<uint8_t>& cipher);
 
 
     std::vector<uint8_t> GetRhoFromPk(const std::vector<uint8_t>& pk);

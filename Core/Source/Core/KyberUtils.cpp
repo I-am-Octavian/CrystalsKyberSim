@@ -134,27 +134,27 @@ namespace Kyber {
 
     std::pair<std::vector<uint8_t>, std::vector<uint8_t>> GenerateKeyPair()
     {
-        std::vector<uint8_t> pk(pqcrystals_kyber512_avx2_PUBLICKEYBYTES);
-        std::vector<uint8_t> sk(pqcrystals_kyber512_avx2_SECRETKEYBYTES);
+        std::vector<uint8_t> pk(pqcrystals_kyber512_ref_PUBLICKEYBYTES);
+        std::vector<uint8_t> sk(pqcrystals_kyber512_ref_SECRETKEYBYTES);
 
-        pqcrystals_kyber512_avx2_keypair(pk.data(), sk.data());
-
+        pqcrystals_kyber512_ref_keypair(pk.data(), sk.data());
         return { pk, sk };
     }
 
-    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t> secret)
+    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t>& secret)
     {
         std::vector<uint8_t> pk_bytes = ToBytes(pk);
         std::vector<uint8_t> ct(pqcrystals_kyber512_CIPHERTEXTBYTES);
-        pqcrystals_kyber512_avx2_enc(ct.data(), secret.data(), pk_bytes.data());
+        std::cout << "ENCR" << pqcrystals_kyber512_ref_enc(ct.data(), secret.data(), pk_bytes.data()) << std::endl;
+        
         return ct;
     }
 
-    std::vector<uint8_t> Decrypt(Polynomial sk, std::vector<uint8_t> cipher)
+    std::vector<uint8_t> Decrypt(Polynomial sk, const std::vector<uint8_t>& cipher)
     {
         std::vector<uint8_t> sk_bytes = ToBytes(sk);
         std::vector<uint8_t> secret(32);
-        pqcrystals_kyber512_avx2_dec(secret.data(), cipher.data(), sk_bytes.data());
+        std::cout << "DECR" << pqcrystals_kyber512_ref_dec(secret.data(), cipher.data(), sk_bytes.data()) << std::endl;
         return secret;
     }
 

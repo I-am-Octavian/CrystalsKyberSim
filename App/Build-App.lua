@@ -17,7 +17,7 @@ project "App"
 
    links
    {
-      "Core"
+      "Core"      
    }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")

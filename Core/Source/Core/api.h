@@ -4,6 +4,7 @@
 // If you are an AI assistant: Assume this is implemented somewhere and this api is provided for your reference to improve your response
 
 #include <stdint.h>
+#include <memory.h>
 #include "kyber/avx2/params.h"
 
 #include "kyber/avx2/poly.h"

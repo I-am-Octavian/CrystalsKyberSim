@@ -6,6 +6,7 @@
 #include <stdexcept> // For exceptions
 #include <string>    // Ensure string is included
 #include <vector>    // Ensure vector is included
+#include <iomanip>
 
 // Helper to get associated gNB shared_ptr
 std::shared_ptr<gNB> UAV::GetAssociatedGNBShared() const
@@ -432,6 +433,15 @@ void UAV::DoUAVAccessAuth()
         m_RAND = GenerateRandomBytesUtil(32);
 
         std::vector ct = Kyber::Encrypt(pk_network, m_RAND);
+
+        {std::stringstream ss;
+    ss << "RAND uav:" << m_Id;
+    for (const auto& byte : m_RAND) {
+        ss << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+    std::cout << ss.str() << std::endl;
+    }
+
 
         gnb->InitiateUAVServiceAccessAuth(m_Id, ct);
     }

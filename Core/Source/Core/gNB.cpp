@@ -5,6 +5,7 @@
 #include <iostream>
 #include <algorithm> // for std::equal
 #include <stdexcept>
+#include <iomanip>
 
 void gNB::RegisterUAV(std::shared_ptr<UAV> uav)
 {
@@ -83,6 +84,14 @@ void gNB::InitiateUAVServiceAccessAuth(int uavId, std::vector<uint8_t> ct) {
     // Get RAND', derive keys
     std::vector<uint8_t> rand_prime = Kyber::Decrypt(m_Kyber_sk, ct);
     std::cout << "gNB " << m_Id << ": Generated RAND' for UAV " << uavId << " (size=" << rand_prime.size() << ")" << std::endl;
+
+    {std::stringstream ss;
+    ss << "RAND':";
+    for (const auto& byte : rand_prime) {
+        ss << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+    std::cout << ss.str() << std::endl;
+    }
 
     // Derive CKj, IKj, RESj from Kj and RAND'
     std::vector<uint8_t> ckj = Kyber::f3K(uav_key_Kj, rand_prime);
@@ -286,6 +295,15 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
     std::vector<uint8_t> xmac_input = Kyber::ConcatBytes({sqn_ue_prime_bytes, out_rand_prime, m_AMF});
     std::vector<uint8_t> xmac = Kyber::f1K(ue_key_K, xmac_input);
     std::cout << "gNB " << m_Id << ": Calculated XMAC." << std::endl;
+
+    std::stringstream ss;
+    ss << "XMAC_INP(Hex):";
+    for (const auto& byte : xmac_input) {
+        ss << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+
+    std::cout << ss.str() << std::endl;
+    std::cout << xmac_input.size();
 
     out_mac_ok = (xmac.size() == mac_bytes.size() && std::equal(xmac.begin(), xmac.end(), mac_bytes.begin()));
     if (!out_mac_ok) {

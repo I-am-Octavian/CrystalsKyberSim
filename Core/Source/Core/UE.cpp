@@ -451,6 +451,16 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
         std::cout << "Warning: Using placeholder implementation for f1K" << std::endl;
     }
 
+        {std::stringstream ss;
+    ss << "MAC_INP:";
+    for (const auto& byte : macInput) {
+        ss << " " << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+
+    std::cout << ss.str() << std::endl;
+    std::cout << macInput.size();
+    }
+
     // Step 13: Form SUCI = C1 || C2 || MAC
     std::vector<uint8_t> SUCI_bytes;
     SUCI_bytes.insert(SUCI_bytes.end(), C1.begin(), C1.end());
