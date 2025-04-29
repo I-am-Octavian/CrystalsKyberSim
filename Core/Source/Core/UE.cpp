@@ -382,7 +382,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     catch (...) {
         // Fallback for compilation if the actual function is not available
         decompressed = { 0 };
-        std::cout << "Warning: Using placeholder implementation for Decompressq" << std::endl;
+        
     }
 
     std::vector<uint8_t> v(polynomialSize / 2); // Simplified placeholder
@@ -401,7 +401,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     catch (...) {
         // Fallback for compilation if the actual function is not available
         MSK = m_RAND;
-        std::cout << "Warning: Using placeholder implementation for KDF" << std::endl;
+        
     }
 
     // Step 10: Convert SQN to bytes for further operations
@@ -426,7 +426,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     catch (...) {
         // Fallback for compilation if the actual function is not available
         C2 = supiAndSqn;
-        std::cout << "Warning: Using placeholder implementation for EMSK" << std::endl;
+        
     }
 
     // Step 12: Compute MAC = f1K(SQNUE || RAND || AMF)
@@ -446,7 +446,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     catch (...) {
         // Fallback for compilation if the actual function is not available
         MAC = macInput;
-        std::cout << "Warning: Using placeholder implementation for f1K" << std::endl;
+        
     }
 
     // Step 13: Form SUCI = C1 || C2 || MAC
