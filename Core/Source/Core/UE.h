@@ -24,6 +24,13 @@ public:
         : Entity(xPos, yPos, xVel, yVel, id), m_LongTermKey(theLongTermKey)
     {
         m_SUPI = "SUPI_UE" + std::to_string(id); // Default SUPI based on ID
+
+        const auto& [pk, sk] = Kyber::GenerateKeyPair();
+        m_Kyber_pk = Kyber::ToPoly(pk);
+        m_Kyber_sk = Kyber::ToPoly(sk);
+
+        m_Kyber_rho = Kyber::GetRhoFromPk(pk);
+
     }
 
     std::string GetType() const override { return "UE"; }
@@ -88,9 +95,13 @@ private:
     std::string m_SUPI;                 // Subscriber Permanent Identifier
     std::string m_LongTermKey;          // Long-term secret key K
     std::vector<uint8_t> m_AMF;         // Authentication Management Field
-    std::vector<uint8_t> m_Rho;         // Public parameter rho (for generating A)
+    std::vector<uint8_t> m_NetworkRho;  // Public parameter rho
     Kyber::Polynomial m_NetworkPK;      // Network public key pk
-    Kyber::Matrix m_A;                  // Matrix A (generated from rho)
+    Kyber::Matrix m_A;                  // Matrix A
+
+    std::vector<uint8_t> m_Kyber_rho;    // Public parameter rho
+    Kyber::Polynomial m_Kyber_sk;        // Secret key s (Polynomial)
+    Kyber::Polynomial m_Kyber_pk;        // Public key pk = As + e (Polynomial)
 
     // --- Authentication State ---
     std::vector<uint8_t> m_RAND;        // Current random value used in SUCI

@@ -76,7 +76,7 @@ public:
 
     // --- UAV Service Access Authentication (Phase A) ---
     // Called by gNB to initiate auth for a specific UAV
-    void InitiateUAVServiceAccessAuth(int uavId);
+    void InitiateUAVServiceAccessAuth(int uavId, std::vector<uint8_t> ct);
     // Called by UAV to confirm successful authentication
     void ReceiveServiceAccessConfirmation(int uavId);
 

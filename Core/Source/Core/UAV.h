@@ -22,7 +22,14 @@ class UE;
 class UAV : public Entity {
 public:
     UAV(uint32_t xPos, uint32_t yPos, uint32_t xVel = 0, uint32_t yVel = 0, uint32_t id = 0) 
-        : Entity(xPos, yPos, xVel, yVel, id) {}
+        : Entity(xPos, yPos, xVel, yVel, id) 
+    {
+        const auto& [pk, sk] = Kyber::GenerateKeyPair();
+        m_Kyber_pk = Kyber::ToPoly(pk);
+        m_Kyber_sk = Kyber::ToPoly(sk);
+
+        m_Kyber_rho = Kyber::GetRhoFromPk(pk);
+    }
 
     std::string GetType() const override { return "UAV"; }
 
@@ -38,6 +45,9 @@ public:
     void SetLongTermKey(const std::string& key);
 
     // --- UAV Service Access Authentication (Phase A) ---
+    
+    void DoUAVAccessAuth();
+
     // Called by gNB after successful AKA steps
     // void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j, const std::vector<uint8_t>& cj);
     void ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j,
@@ -126,6 +136,9 @@ private:
     std::vector<uint8_t> m_Derived_IKj; // Derived IKj
     std::vector<uint8_t> m_Derived_RESj; // Derived RESj
 
+    std::vector<uint8_t> m_Kyber_rho;    // Public parameter rho
+    Kyber::Polynomial m_Kyber_sk;        // Secret key s (Polynomial)
+    Kyber::Polynomial m_Kyber_pk;        // Public key pk = As + e (Polynomial)
 
     bool m_IsAuthenticatedWithGNB = false;
     std::string m_TIDj = ""; // Temporary Identity assigned by gNB
@@ -144,6 +157,8 @@ private:
         std::vector<uint8_t> expected_res_i; // Store RESi during handover
     };
     std::map<int, UEConnectionInfo> m_ConnectedUEInfo; // Map UE ID -> Info
+
+    std::vector<uint8_t> m_RAND;
 
     // Helper to get associated gNB shared_ptr
     std::shared_ptr<gNB> GetAssociatedGNBShared() const;

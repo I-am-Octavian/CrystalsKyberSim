@@ -19,6 +19,7 @@ int main() {
 
     // Add a UE (user equipment) with custom long-term key
     world.addUE(201, 350, 350, "5G_LONG_TERM_KEY");
+    world.addUE(202, 750, 750, "5G_LONG_TERM_KEY");
 
     // Link entities to allow UAVs to find UEs and vice versa
     world.linkEntities();
@@ -36,11 +37,13 @@ int main() {
     // Phase B: UE connects via an authenticated UAV
     std::cout << "\n\n===== PHASE B: UE Connects via Authenticated UAV =====" << std::endl;
     world.simulateUAVAssistedConnection(201);
+    world.simulateUAVAssistedConnection(202);
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Allow time for connection
 
     // Phase C: UE Handover between authenticated UAVs
     std::cout << "\n\n===== PHASE C: UE Handover Authentication =====" << std::endl;
     world.simulateUEHandoverAuthentication(201, 102);
+    world.simulateUEHandoverAuthentication(202, 101);
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Allow time for handover
 
     std::cout << "\n===== 5G Authentication Simulation Complete =====" << std::endl;

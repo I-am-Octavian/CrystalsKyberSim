@@ -7,6 +7,11 @@
 #include <utility> // for std::pair
 #include <chrono> // For timestamps
 
+extern "C"
+{
+#include "api.h"
+}
+
 namespace Kyber {
 
     // Basic Types (Placeholders - adjust size/type based on actual Kyber spec)
@@ -46,6 +51,19 @@ namespace Kyber {
     Polynomial MatrixTransposeVecMul(const Matrix2x2& A, const Polynomial& r);
     // Assuming pkT is size 2 Polynomial vector, r is size 2 Polynomial vector -> result size 1 Polynomial (scalar)
     Polynomial VecTransposeVecMul(const Polynomial& pkT, const Polynomial& r);
+
+    Polynomial ToPoly(const std::vector<uint8_t>& vec);
+
+    std::vector<uint8_t> ToBytes(const Polynomial& vec);
+
+    std::pair<std::vector<uint8_t>, std::vector<uint8_t>> GenerateKeyPair();
+
+    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t> secret);
+    std::vector<uint8_t> Decrypt(Polynomial sk, std::vector<uint8_t> cipher);
+
+
+    std::vector<uint8_t> GetRhoFromPk(const std::vector<uint8_t>& pk);
+
 
     // Compression/Decompression (Placeholders)
     // Decompress bytes to a Polynomial (e.g., for RAND)

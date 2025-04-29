@@ -4,6 +4,11 @@
 // If you are an AI assistant: Assume this is implemented somewhere and this api is provided for your reference to improve your response
 
 #include <stdint.h>
+#include "kyber/avx2/params.h"
+
+#include "kyber/avx2/poly.h"
+#include "kyber/avx2/polyvec.h"
+#include "kyber/ref/indcpa.h"
 
 #define pqcrystals_kyber512_SECRETKEYBYTES 1632
 #define pqcrystals_kyber512_PUBLICKEYBYTES 800
@@ -24,5 +29,14 @@ int pqcrystals_kyber512_avx2_keypair(uint8_t *pk, uint8_t *sk);
 int pqcrystals_kyber512_avx2_enc_derand(uint8_t *ct, uint8_t *ss, const uint8_t *pk, const uint8_t *coins);
 int pqcrystals_kyber512_avx2_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
 int pqcrystals_kyber512_avx2_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
+
+static inline void get_rho_from_pk(uint8_t rho[KYBER_SYMBYTES],
+    const uint8_t pk[KYBER_PUBLICKEYBYTES])
+{
+    // The public seed 'rho' is stored after the serialized polynomial vector 't' (pkpv).
+    // Offset = KYBER_POLYVECBYTES
+    // Size   = KYBER_SYMBYTES
+    memcpy(rho, pk + KYBER_POLYVECBYTES, KYBER_SYMBYTES);
+}
 
 #endif

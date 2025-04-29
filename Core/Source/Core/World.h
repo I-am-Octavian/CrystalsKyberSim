@@ -116,12 +116,10 @@ public:
              std::cerr << "World Error: UAV " << uavId << " not found." << std::endl;
              return;
          }
-         if (auto gnb = uav->GetAssociatedGNB().lock()) {
-             gnb->InitiateUAVServiceAccessAuth(uavId);
-             // Note: The rest of Phase A happens via callbacks between gNB and UAV
-         } else {
-             std::cerr << "World Error: UAV " << uavId << " has no associated gNB." << std::endl;
-         }
+
+         uav->DoUAVAccessAuth();
+         // The rest of Phase A happens via callbacks between gNB and UAV
+         
     }
 
     // Phase B: UE connects via an authenticated UAV

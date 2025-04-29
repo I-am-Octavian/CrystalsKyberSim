@@ -110,6 +110,62 @@ namespace Kyber {
         return {dot_product}; // Return as Polynomial of size 1
     }
 
+    Polynomial ToPoly(const std::vector<uint8_t>& vec)
+    {
+        Polynomial res;
+        res.reserve(vec.size());
+        for (uint8_t v : vec)
+        {
+            res.push_back(static_cast<int>(v));
+        }
+        return res;
+    }
+
+    std::vector<uint8_t> ToBytes(const Polynomial& vec)
+    {
+        std::vector<uint8_t> res;
+        res.reserve(vec.size());
+        for (int v : vec)
+        {
+            res.push_back(static_cast<uint8_t>(v));
+        }
+        return res;
+    }
+
+    std::pair<std::vector<uint8_t>, std::vector<uint8_t>> GenerateKeyPair()
+    {
+        std::vector<uint8_t> pk(pqcrystals_kyber512_avx2_PUBLICKEYBYTES);
+        std::vector<uint8_t> sk(pqcrystals_kyber512_avx2_SECRETKEYBYTES);
+
+        pqcrystals_kyber512_avx2_keypair(pk.data(), sk.data());
+
+        return { pk, sk };
+    }
+
+    std::vector<uint8_t> Encrypt(Polynomial pk, std::vector<uint8_t> secret)
+    {
+        std::vector<uint8_t> pk_bytes = ToBytes(pk);
+        std::vector<uint8_t> ct(pqcrystals_kyber512_CIPHERTEXTBYTES);
+        pqcrystals_kyber512_avx2_enc(ct.data(), secret.data(), pk_bytes.data());
+        return ct;
+    }
+
+    std::vector<uint8_t> Decrypt(Polynomial sk, std::vector<uint8_t> cipher)
+    {
+        std::vector<uint8_t> sk_bytes = ToBytes(sk);
+        std::vector<uint8_t> secret(32);
+        pqcrystals_kyber512_avx2_dec(secret.data(), cipher.data(), sk_bytes.data());
+        return secret;
+    }
+
+    std::vector<uint8_t> GetRhoFromPk(const std::vector<uint8_t>& pk)
+    {
+        std::vector<uint8_t> rho(KYBER_SYMBYTES);
+        get_rho_from_pk(rho.data(), pk.data());
+
+        return rho;
+    }
+
 
     Polynomial Decompressq(const std::vector<uint8_t>& input, int parameter) {
         std::cout << "Warning: Using placeholder implementation for Decompressq" << std::endl;

@@ -15,7 +15,7 @@ void gNB::RegisterUAV(std::shared_ptr<UAV> uav)
 
 void gNB::SetupKyberParams() {
     std::cout << "gNB " << m_Id << ": Setting up Kyber parameters..." << std::endl;
-    m_Kyber_d = GenerateRandomBytesUtil(32);
+    /*m_Kyber_d = GenerateRandomBytesUtil(32);
     auto seeds = Kyber::G(m_Kyber_d);
     m_Kyber_rho = seeds.first;
     m_Kyber_sigma = seeds.second;
@@ -24,7 +24,13 @@ void gNB::SetupKyberParams() {
     auto e = Kyber::SampleB3(poly_vector_size, m_Kyber_sigma);
     m_Kyber_A = Kyber::GenerateA(m_Kyber_rho);
     auto As = Kyber::MatrixVecMul(m_Kyber_A, m_Kyber_sk);
-    m_Kyber_pk = Kyber::PolyAdd(As, e);
+    m_Kyber_pk = Kyber::PolyAdd(As, e);*/
+
+    const auto& [pk, sk] = Kyber::GenerateKeyPair();
+    m_Kyber_pk = Kyber::ToPoly(pk);
+    m_Kyber_sk = Kyber::ToPoly(sk);
+
+    m_Kyber_rho = Kyber::GetRhoFromPk(pk);
     std::cout << "gNB " << m_Id << ": Kyber parameters generated." << std::endl;
 }
 
@@ -40,7 +46,7 @@ void gNB::ProvisionUAVKey(int uavId, const std::string& key) {
 }
 
 void gNB::GenerateGroupKey() {
-    m_GKUAV = GenerateRandomBytesUtil(32); // Example 32-byte group key
+    m_GKUAV = GenerateRandomBytesUtil(32); // 32-byte group key
     std::cout << "gNB " << m_Id << ": Generated new Group Key GKUAV (size=" << m_GKUAV.size() << ")" << std::endl;
 }
 
@@ -52,7 +58,7 @@ void gNB::HandleMacFailure(UAV& uav, int ueId)
 {
 }
 
-void gNB::InitiateUAVServiceAccessAuth(int uavId) {
+void gNB::InitiateUAVServiceAccessAuth(int uavId, std::vector<uint8_t> ct) {
     std::cout << "gNB " << m_Id << ": Initiating Service Access Auth for UAV " << uavId << std::endl;
     auto uav_it = m_RegisteredUAVs.find(uavId);
     if (uav_it == m_RegisteredUAVs.end() || uav_it->second.expired()) {
@@ -74,8 +80,8 @@ void gNB::InitiateUAVServiceAccessAuth(int uavId) {
     std::cout << "gNB " << m_Id << ": Retrieved key Kj for UAV " << uavId << "." << std::endl;
 
     // --- Start AKA Steps ---
-    // Step 1 & 2 (Simplified gNB side): Generate RAND', derive keys
-    std::vector<uint8_t> rand_prime = GenerateRandomBytesUtil(32); // Generate fresh RAND'
+    // Get RAND', derive keys
+    std::vector<uint8_t> rand_prime = Kyber::Decrypt(m_Kyber_sk, ct);
     std::cout << "gNB " << m_Id << ": Generated RAND' for UAV " << uavId << " (size=" << rand_prime.size() << ")" << std::endl;
 
     // Derive CKj, IKj, RESj from Kj and RAND'
@@ -255,9 +261,9 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
 
     std::cout << "gNB " << m_Id << ": Parsed SUCI (C1 size=" << c1_bytes.size() << ", C2 size=" << c2_bytes.size() << ", MAC size=" << mac_bytes.size() << ")" << std::endl;
 
-    std::cout << "gNB " << m_Id << ": (Placeholder) Decrypting C1..." << std::endl;
-    out_rand_prime = Kyber::Compressq(Kyber::Polynomial(), 1);
-    std::cout << "gNB " << m_Id << ": (Placeholder) Got RAND' (size=" << out_rand_prime.size() << ")" << std::endl;
+    //out_rand_prime = Kyber::Compressq(Kyber::Polynomial(), 1);
+    out_rand_prime = Kyber::Decrypt(m_Kyber_sk, c1_bytes);
+    std::cout << "gNB " << m_Id << ": Got RAND' (size=" << out_rand_prime.size() << ")" << std::endl;
 
     std::vector<uint8_t> msk_prime = Kyber::KDF(out_rand_prime);
     std::vector<uint8_t> decrypted_c2 = Kyber::DMSK(c2_bytes);

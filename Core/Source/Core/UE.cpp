@@ -12,7 +12,7 @@ void UE::SetAuthenticationParameters(const std::string& supi, const std::string&
     m_SUPI = supi;
     m_LongTermKey = key;
     m_AMF = amf;
-    m_Rho = rho;
+    m_NetworkRho = rho;
     m_NetworkPK = pk;
 
     // Assuming Kyber::Matrix A is generated from rho  
@@ -37,7 +37,7 @@ void UE::InitiateConnection(UAV& targetUAV) {
     // GenerateAuthParams calculates these based on Kyber PKE (placeholders)
     // and standard AKA f1K (placeholder).
     // It stores RAND and increments SQN internally.
-    auto [suci_bytes, suci_string_for_display] = GenerateAuthParams(); // Assuming this returns the byte vector now
+    auto [suci_bytes, suci_string_for_display] = GenerateAuthParams(); // this returns bytes vector
 
     std::cout << "UE " << m_Id << ": Generated SUCI: " << suci_string_for_display << std::endl;
 
@@ -358,39 +358,41 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     // Step 3: Sample r ∈ R^2_q from B3
     const size_t polynomialSize = 256; // Size depends on Kyber specification
     const int q = 3329;  // Kyber's q value
-    auto r = SampleB3(polynomialSize);
+    //auto r = SampleB3(polynomialSize);
 
-    // Step 4: Sample e1 ∈ R^2_q from B2
-    auto e1 = SampleB2(polynomialSize);
+    //// Step 4: Sample e1 ∈ R^2_q from B2
+    //auto e1 = SampleB2(polynomialSize);
 
-    // Step 5: Sample e2 ∈ R_q from B2
-    auto e2 = SampleB2(polynomialSize / 2);
+    //// Step 5: Sample e2 ∈ R_q from B2
+    //auto e2 = SampleB2(polynomialSize / 2);
 
-    // Step 6: Compute u = A^T * r + e1
-    // This is a simplified placeholder - in a real implementation,
-    // A would be a public matrix from Kyber parameters
-    std::vector<uint8_t> u(polynomialSize); // Simplified placeholder
+    //// Step 6: Compute u = A^T * r + e1
+    //// This is a simplified placeholder - in a real implementation,
+    //// A would be a public matrix from Kyber parameters
+    //std::vector<uint8_t> u(polynomialSize); // Simplified placeholder
 
-    // Step 7: Compute v = pk^T * r + e2 + Decompressq(RAND, 1)
-    // This is a simplified placeholder - in a real implementation,
-    // pk would be the public key from the network
-    std::vector<int> decompressed;
-    try {
-        // Assuming Kyber::Decompressq is implemented elsewhere
-        decompressed = Kyber::Decompressq(m_RAND, 1);
-    }
-    catch (...) {
-        // Fallback for compilation if the actual function is not available
-        decompressed = { 0 };
-        std::cout << "Warning: Using placeholder implementation for Decompressq" << std::endl;
-    }
+    //// Step 7: Compute v = pk^T * r + e2 + Decompressq(RAND, 1)
+    //// This is a simplified placeholder - in a real implementation,
+    //// pk would be the public key from the network
+    //std::vector<int> decompressed;
+    //try {
+    //    // Assuming Kyber::Decompressq is implemented elsewhere
+    //    decompressed = Kyber::Decompressq(m_RAND, 1);
+    //}
+    //catch (...) {
+    //    // Fallback for compilation if the actual function is not available
+    //    decompressed = { 0 };
+    //    std::cout << "Warning: Using placeholder implementation for Decompressq" << std::endl;
+    //}
 
-    std::vector<uint8_t> v(polynomialSize / 2); // Simplified placeholder
+    //std::vector<uint8_t> v(polynomialSize / 2); // Simplified placeholder
 
     // Step 8: Compute C1 = (u, v)
-    std::vector<uint8_t> C1;
+
+    std::vector<uint8_t> C1 = Kyber::Encrypt(m_NetworkPK, m_RAND);
+    /*std::vector<uint8_t> C1;
     C1.insert(C1.end(), u.begin(), u.end());
-    C1.insert(C1.end(), v.begin(), v.end());
+    C1.insert(C1.end(), v.begin(), v.end());*/
 
     // Step 9: Compute MSK = KDF(RAND)
     std::vector<uint8_t> MSK;

@@ -1,4 +1,4 @@
-#include "UAV.h"
+﻿#include "UAV.h"
 #include "gNB.h" // Include gNB to call its methods
 #include "UE.h"  // Include UE to call its methods
 #include "KyberUtils.h"
@@ -421,4 +421,23 @@ void UAV::SetLongTermKey(const std::string &key)
 {
     m_LongTermKey_Kj = key;
     std::cout << "UAV " << m_Id << ": Long term key set." << std::endl;
+}
+
+void UAV::DoUAVAccessAuth()
+{
+    if (auto gnb = GetAssociatedGNB().lock()) 
+    {
+        const auto& pk_network = gnb->GetKyberPublicKey();
+
+        m_RAND = GenerateRandomBytesUtil(32);
+
+        std::vector ct = Kyber::Encrypt(pk_network, m_RAND);
+
+        gnb->InitiateUAVServiceAccessAuth(m_Id, ct);
+    }
+    else 
+    {
+        std::cerr << "World Error: UAV " << m_Id << " has no associated gNB." << std::endl;
+    }
+
 }
