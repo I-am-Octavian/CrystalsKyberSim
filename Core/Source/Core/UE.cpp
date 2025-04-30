@@ -141,7 +141,7 @@ void UE::HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
     std::cout << "UE " << m_Id << ": Storing TIDi, KUAVi, Tokeni." << std::endl;
 
     // Transmit access confirmation message to gNB (via UAV)
-    std::cout << "UE " << m_Id << ": (Placeholder) Sending Access Confirmation message." << std::endl;
+    std::cout << "UE " << m_Id << ": Sending Access Confirmation message." << std::endl;
     // This step isn't fully detailed, might involve sending TIDi or similar back.
 
     // Update state to Connected

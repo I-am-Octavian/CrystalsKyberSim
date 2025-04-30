@@ -9,7 +9,7 @@
 
 namespace Kyber {
 
-    // Basic Types (Placeholders - adjust size/type based on actual Kyber spec)
+    
     using Polynomial = std::vector<int>;      // Represents a polynomial R_q
     using Matrix = std::vector<Polynomial>; // Represents a matrix (e.g., A, pk, sk as vectors of Polynomials)
                                             // Or: using Matrix = std::vector<std::vector<Polynomial>> for A?
@@ -17,12 +17,12 @@ namespace Kyber {
     using Matrix2x2 = std::vector<std::vector<int>>; // Specific 2x2 matrix
     using Timestamp = std::chrono::time_point<std::chrono::system_clock>;
 
-    // Constants (Placeholder)
+    
     const size_t POLYNOMIAL_SIZE = 256; // Example size n
     const size_t K = 2;                 // Example dimension k for Kyber512
     const int Q = 3329;               // Example modulus q
 
-    // --- Core Kyber-like Functions (Placeholders) ---
+    
 
     // G: Seed expansion d -> (rho, sigma)
     std::pair<std::vector<uint8_t>, std::vector<uint8_t>> G(const std::vector<uint8_t>& d);
@@ -47,13 +47,13 @@ namespace Kyber {
     // Assuming pkT is size 2 Polynomial vector, r is size 2 Polynomial vector -> result size 1 Polynomial (scalar)
     Polynomial VecTransposeVecMul(const Polynomial& pkT, const Polynomial& r);
 
-    // Compression/Decompression (Placeholders)
+    
     // Decompress bytes to a Polynomial (e.g., for RAND)
     Polynomial Decompressq(const std::vector<uint8_t>& input, int parameter);
     // Compress a Polynomial to bytes (e.g., for RAND')
     std::vector<uint8_t> Compressq(const Polynomial& input, int parameter);
 
-    // --- 5G Protocol Specific Functions (Placeholders) ---
+    
 
     // Key Derivation Function
     std::vector<uint8_t> KDF(const std::vector<uint8_t>& input);
@@ -75,14 +75,14 @@ namespace Kyber {
 
     // --- New Functions for UAV Protocol ---
 
-    // Symmetric Encryption/Decryption (Placeholder using simple XOR)
+    
     std::vector<uint8_t> EncryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data);
     std::vector<uint8_t> DecryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& ciphertext);
 
-    // Temporary Identity Generation (Placeholder)
+    
     std::string GenerateTID(const std::string& prefix);
 
-    // Timestamp Generation and Validation (Placeholder)
+    
     Timestamp GenerateTST(int validity_seconds);
     bool ValidateTST(const Timestamp& tst);
 

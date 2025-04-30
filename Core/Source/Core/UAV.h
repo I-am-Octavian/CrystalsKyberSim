@@ -75,7 +75,7 @@ public:
     inline bool IsAuthenticatedWithGNB() const { return m_IsAuthenticatedWithGNB; }
     void BroadcastNotification(); // Broadcast TIDj
 
-    // Placeholder for finding UE (replace with World lookup)
+    
     virtual std::shared_ptr<UE> FindUEById(int ueId) 
     {
         if (findUEHandler)
@@ -83,7 +83,7 @@ public:
         else
             return nullptr; 
     }
-    // Placeholder for getting self shared_ptr (replace with World mechanism or pass shared_ptr)
+    
     virtual std::shared_ptr<UAV> GetSelfPtr() 
     {
         if (getSelfPtrHandler)

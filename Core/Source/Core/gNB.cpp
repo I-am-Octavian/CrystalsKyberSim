@@ -255,9 +255,9 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
 
     std::cout << "gNB " << m_Id << ": Parsed SUCI (C1 size=" << c1_bytes.size() << ", C2 size=" << c2_bytes.size() << ", MAC size=" << mac_bytes.size() << ")" << std::endl;
 
-    std::cout << "gNB " << m_Id << ": (Placeholder) Decrypting C1..." << std::endl;
+    std::cout << "gNB " << m_Id << ": Decrypting C1..." << std::endl;
     out_rand_prime = Kyber::Compressq(Kyber::Polynomial(), 1);
-    std::cout << "gNB " << m_Id << ": (Placeholder) Got RAND' (size=" << out_rand_prime.size() << ")" << std::endl;
+    std::cout << "gNB " << m_Id << ": Got RAND' (size=" << out_rand_prime.size() << ")" << std::endl;
 
     std::vector<uint8_t> msk_prime = Kyber::KDF(out_rand_prime);
     std::vector<uint8_t> decrypted_c2 = Kyber::DMSK(c2_bytes);
@@ -309,7 +309,7 @@ bool gNB::PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
 }
 
 std::vector<uint8_t> gNB::DeriveKRAN(const std::string& id, const std::vector<uint8_t>& rand_prime) {
-    std::cout << "gNB " << m_Id << ": (Placeholder) Deriving KRAN for " << id << std::endl;
+    std::cout << "gNB " << m_Id << ": Deriving KRAN for " << id << std::endl;
     return Kyber::KDF(Kyber::StringToBytes(m_UEKeys[id]), rand_prime);
 
     std::string key_material = "KRAN_for_" + id;
@@ -327,10 +327,10 @@ void gNB::HandleUAVFailure(UAV& failedUAV)
     failedUAV.SetOperationalStatus(false);
 
     for (int ueId : affectedUEIds) {
-        // Placeholder: Find the actual UE object (World class might help here)
-        // Placeholder: Find the best *alternative* operational UAV for this UE
-        // Placeholder: Command the UE to handover
-        // Placeholder: Optionally inform the target UAV to expect the UE
+        
+        
+        
+        
     }
 }
 

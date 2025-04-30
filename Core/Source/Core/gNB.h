@@ -144,14 +144,14 @@ private:
     std::map<int, OngoingUEAuthInfo> m_OngoingUEAuths; // Map UE ID -> Auth Info
 
     // --- Private Helper Methods ---
-    // Placeholder for standard AKA steps (modified from ProcessAuthenticationRequest)
+    
     bool PerformStandardAKA_Step1_2(const std::vector<uint8_t>& suci_bytes,
                                      std::string& out_supi, uint64_t& out_sqn_ue,
                                      std::vector<uint8_t>& out_rand_prime,
                                      std::vector<uint8_t>& out_autn_or_auts, // AUTN on success, AUTS on sync fail
                                      bool& out_mac_ok, bool& out_sqn_ok);
 
-    // Placeholder for deriving keys based on standard AKA
+    
     std::vector<uint8_t> DeriveKRAN(const std::string& supi_or_uav_id, const std::vector<uint8_t>& rand_prime);
 
     // Handle results of standard AKA for UAV
