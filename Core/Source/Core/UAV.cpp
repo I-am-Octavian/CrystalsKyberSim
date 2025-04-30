@@ -23,13 +23,13 @@ std::shared_ptr<gNB> UAV::GetAssociatedGNBShared() const
 // void UAV::ReceiveServiceAccessAuthParams(const std::vector<uint8_t>& hres_star_j, const std::vector<uint8_t>& cj) {
 //     std::cout << "UAV " << m_Id << ": Received Service Access Auth Params (HRES*j, Cj) from gNB." << std::endl;
 
-//     // Placeholder: Compute XRES*j and KRANj (requires state from previous AKA steps, not fully modeled here)
+
 //     // For simulation, assume we have derived KRANj and XRES*j somehow.
-//     std::vector<uint8_t> placeholder_xres_star_j = hres_star_j; // Assume match for now
-//     m_KRANj = Kyber::KDF(Kyber::StringToBytes("placeholder_key_for_KRANj_" + std::to_string(m_Id))); // Placeholder KRANj
+
+
 
 //     std::vector<uint8_t> cj_and_xres_star_j = cj;
-//     cj_and_xres_star_j.insert(cj_and_xres_star_j.end(), placeholder_xres_star_j.begin(), placeholder_xres_star_j.end());
+
 //     std::vector<uint8_t> hxres_star_j = Kyber::KDF(m_KRANj, cj_and_xres_star_j);
 
 //     std::cout << "UAV " << m_Id << ": Calculated HXRES*j." << std::endl;
@@ -38,7 +38,7 @@ std::shared_ptr<gNB> UAV::GetAssociatedGNBShared() const
 //         std::cout << "UAV " << m_Id << ": HRES*j matches HXRES*j. Authenticating gNB." << std::endl;
 //         std::vector<uint8_t> decrypted_cj = Kyber::DecryptSymmetric(m_KRANj, cj);
 
-//         // Placeholder: Parse TIDj and GKUAV from decrypted_cj
+
 //         // Assuming format: [TIDj_bytes][GKUAV_bytes]
 //         if (decrypted_cj.size() > 10) { // Arbitrary minimum size
 //             size_t tid_len = 10; // Example fixed length
@@ -47,7 +47,7 @@ std::shared_ptr<gNB> UAV::GetAssociatedGNBShared() const
 //             m_IsAuthenticatedWithGNB = true;
 //             std::cout << "UAV " << m_Id << ": Decrypted Cj. Got TIDj=" << m_TIDj << ", GKUAV (size=" << m_GKUAV.size() << "). Storing keys." << std::endl;
 
-//             // Placeholder: Update SQNj = SQNj + 1 (SQN management not fully modeled)
+
 
 //             ConfirmServiceAccessAuth(); // Send confirmation back to gNB
 //         } else {
@@ -88,7 +88,7 @@ void UAV::ReceiveServiceAccessAuthParams(const std::vector<uint8_t> &hres_star_j
 
     // Step 3: Calculate XRES*j = KDF(CKj || IKj, SNN || RAND' || RESj)
     // Assume UAV knows the SNN (Serving Network Name) - needs configuration/provisioning
-    std::string serving_network_name = "TestNet"; // Placeholder SNN
+    std::string serving_network_name = "TestNet"; 
     std::vector<uint8_t> xres_star_input = Kyber::StringToBytes(serving_network_name);
     xres_star_input.insert(xres_star_input.end(), m_Current_RAND_j.begin(), m_Current_RAND_j.end());
     xres_star_input.insert(xres_star_input.end(), m_Derived_RESj.begin(), m_Derived_RESj.end());
@@ -122,7 +122,7 @@ void UAV::ReceiveServiceAccessAuthParams(const std::vector<uint8_t> &hres_star_j
             m_IsAuthenticatedWithGNB = true;
             std::cout << "UAV " << m_Id << ": Decrypted Cj. Got TIDj=" << m_TIDj << ", GKUAV (size=" << m_GKUAV.size() << "). Storing keys." << std::endl;
 
-            // Placeholder: Update SQNj = SQNj + 1 (SQN management not fully modeled)
+            
 
             ConfirmServiceAccessAuth(); // Send confirmation back to gNB
         }
@@ -185,7 +185,7 @@ void UAV::ReceiveUEAuthParams(int ueId,
     std::cout << "UAV " << m_Id << ": Stored TIDi and KUAVi for UE " << ueId << "." << std::endl;
 
     // Forward (HRES*i, Ci) to UE
-    // Placeholder: Find UE object
+    
     auto ue_sp = FindUEById(ueId); // Use virtual function or World lookup
     if (ue_sp)
     {

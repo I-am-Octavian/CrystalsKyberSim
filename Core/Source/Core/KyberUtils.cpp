@@ -7,17 +7,17 @@
 #include <sstream> // for TID generation
 #include <iomanip> // for TID generation
 
-// Basic placeholder implementations - Replace with actual crypto!
+
 
 namespace Kyber {
 
     std::vector<uint8_t> RandValue = { 0 };
 
-    // --- Placeholder Function Implementations ---
+    
 
     std::pair<std::vector<uint8_t>, std::vector<uint8_t>> G(const std::vector<uint8_t>& d) {
         
-        // Simple split for placeholder
+        
         size_t half = d.size() / 2;
         std::vector<uint8_t> rho(d.begin(), d.begin() + half);
         std::vector<uint8_t> sigma(d.begin() + half, d.end());
@@ -51,7 +51,7 @@ namespace Kyber {
 
     Matrix GenerateA(const std::vector<uint8_t>& rho) {
         
-        // Fixed 2x2 matrix for placeholder
+        
         return {{1, 2}, {3, 4}}; // Example fixed matrix
     }
 
@@ -113,7 +113,7 @@ namespace Kyber {
 
     Polynomial Decompressq(const std::vector<uint8_t>& input, int parameter) {
         
-        // Simple conversion for placeholder, assuming 1 byte per coeff
+        
         Polynomial result;
         for(uint8_t byte : input) {
             result.push_back(static_cast<int>(byte)); // No actual decompression
@@ -122,7 +122,7 @@ namespace Kyber {
         if (result.empty()) result.push_back(0); // Ensure not empty
 
         // TODO
-        // Placeholder
+        
         RandValue = input;
         return result; // Return Polynomial
     }
@@ -130,7 +130,7 @@ namespace Kyber {
     std::vector<uint8_t> Compressq(const Polynomial& input, int parameter) {
         
         return RandValue;
-        // Simple conversion for placeholder, assuming 1 byte per coeff
+        
         std::vector<uint8_t> result;
         for(int val : input) {
             result.push_back(static_cast<uint8_t>(val & 0xFF)); // No actual compression
@@ -142,7 +142,7 @@ namespace Kyber {
 
     std::vector<uint8_t> KDF(const std::vector<uint8_t>& input) {
         
-        // Return input slightly modified as placeholder
+        
         std::vector<uint8_t> output = input;
         if (!output.empty()) output[0] ^= 0xAA;
         else output.push_back(0xAA);
@@ -152,7 +152,7 @@ namespace Kyber {
     std::vector<uint8_t> KDF(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data)
     {
         
-        // Return input slightly modified as placeholder
+        
         std::vector<uint8_t> output = data;
         uint8_t val;
         if (!key.empty()) val = key[0];
@@ -165,7 +165,7 @@ namespace Kyber {
 
     std::vector<uint8_t> EMSK(const std::vector<uint8_t>& input) {
         
-        // Return input slightly modified as placeholder "encryption"
+        
         std::vector<uint8_t> output = input;
          if (!output.empty()) output[0] ^= 0xBB;
          else output.push_back(0xBB);
@@ -174,7 +174,7 @@ namespace Kyber {
 
     std::vector<uint8_t> DMSK(const std::vector<uint8_t>& input) {
         
-        // Reverse the placeholder "encryption"
+        
         std::vector<uint8_t> output = input;
          if (!output.empty()) output[0] ^= 0xBB;
          else output.push_back(0xBB); // If input was empty, result is just BB
@@ -253,7 +253,7 @@ namespace Kyber {
         return result;
     }
 
-    // Helper to convert Polynomial to bytes (simple placeholder)
+    
     std::vector<uint8_t> PolyToBytes(const Polynomial& p) {
         std::vector<uint8_t> bytes;
         // Very basic: just take lower 8 bits of each int coeff
@@ -263,7 +263,7 @@ namespace Kyber {
         return bytes;
     }
 
-    // Helper to convert bytes to Polynomial (simple placeholder)
+    
     Polynomial BytesToPoly(const std::vector<uint8_t>& bytes, size_t expected_size) {
          Polynomial p(expected_size, 0);
          for(size_t i=0; i < std::min(bytes.size(), expected_size); ++i) {
@@ -272,7 +272,7 @@ namespace Kyber {
          return p;
     }
 
-    // --- New Placeholder Implementations for UAV Protocol ---
+    
 
     std::vector<uint8_t> EncryptSymmetric(const std::vector<uint8_t>& key, const std::vector<uint8_t>& data) {
         

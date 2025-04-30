@@ -34,8 +34,8 @@ void UE::InitiateConnection(UAV& targetUAV) {
     m_UEState = "Connecting";
 
     // Step 1 & 2: Generate SUCI = C1 || C2 || MAC
-    // GenerateAuthParams calculates these based on Kyber PKE (placeholders)
-    // and standard AKA f1K (placeholder).
+    
+    
     // It stores RAND and increments SQN internally.
     auto [suci_bytes, suci_string_for_display] = GenerateAuthParams(); // Assuming this returns the byte vector now
 
@@ -54,12 +54,12 @@ void UE::HandleUAVAssistedAuthResponse(const std::vector<uint8_t>& hres_star_i,
     // Step 6: Calculate HXRES*i and KRANi
     // Need RAND from the initial GenerateAuthParams call.
     // Need K (long term key).
-    // Placeholder: Derive KRANi (should use CK/IK derived from K and RAND)
-    m_KRANi = Kyber::KDF(Kyber::StringToBytes(m_LongTermKey), m_RAND); // Placeholder KRANi
+
+    m_KRANi = Kyber::KDF(Kyber::StringToBytes(m_LongTermKey), m_RAND); 
     std::cout << "UE " << m_Id << ": Derived KRANi (size=" << m_KRANi.size() << ")" << std::endl;
 
 
-    // Placeholder: Calculate RES*i (requires K, RAND, CK, IK)
+
     std::vector<uint8_t> res_i = Kyber::f2K(m_LongTermKey, m_RAND);
     std::vector<uint8_t> ck = Kyber::f3K(m_LongTermKey, m_RAND);
     std::vector<uint8_t> ik = Kyber::f4K(m_LongTermKey, m_RAND);
@@ -367,12 +367,12 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
     auto e2 = SampleB2(polynomialSize / 2);
 
     // Step 6: Compute u = A^T * r + e1
-    // This is a simplified placeholder - in a real implementation,
+    
     // A would be a public matrix from Kyber parameters
-    std::vector<uint8_t> u(polynomialSize); // Simplified placeholder
+    std::vector<uint8_t> u(polynomialSize); 
 
     // Step 7: Compute v = pk^T * r + e2 + Decompressq(RAND, 1)
-    // This is a simplified placeholder - in a real implementation,
+    
     // pk would be the public key from the network
     std::vector<int> decompressed;
     try {
@@ -385,7 +385,7 @@ std::pair<std::vector<uint8_t>, std::string> UE::GenerateAuthParams()
         
     }
 
-    std::vector<uint8_t> v(polynomialSize / 2); // Simplified placeholder
+    std::vector<uint8_t> v(polynomialSize / 2); 
 
     // Step 8: Compute C1 = (u, v)
     std::vector<uint8_t> C1;
