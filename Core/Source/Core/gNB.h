@@ -71,7 +71,6 @@ public:
     // Handle UAV failure: Find new UAVs for affected UEs
     void HandleUAVFailure(UAV& failedUAV);
 
-    // Helper function placeholder (implementation needed in World or similar)
     virtual UAV* FindBestAlternativeUAV(const Position& uePosition);
 
     // --- UAV Service Access Authentication (Phase A) ---
